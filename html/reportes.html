@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Sistema Académico - Reportes</title>
+        <link rel="stylesheet"
+            href="../css/reportes.css" />
+        <link rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+        <!-- Incluir jsPDF para la generación de PDFs -->
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    </head>
+    <body>
+        <div class="app-container">
+            <nav class="sidebar">
+                <div class="sidebar-header">
+                    <i class="fas fa-university"></i>
+                    <h2>Sistema Académico</h2>
+                </div>
+                <ul class="sidebar-menu">
+                    <li><a href="bitacora.html"><i
+                                class="fas fa-calendar-alt"></i>
+                            <span>Semestres</span></a></li>
+                    <li><a href="docentes.html"><i class="fas fa-user-tie"></i>
+                            <span>Docentes</span></a></li>
+                    <li><a href="docentes.html#requisitos-section"><i
+                                class="fas fa-clipboard-list"></i>
+                            <span>Requisitos</span></a></li>
+                    <li class="active"><a href="reportes.html"><i
+                                class="fas fa-chart-bar"></i>
+                            <span>Reportes</span></a></li>
+                    <li class="logout"><a href="../index.html"><i
+                                class="fas fa-sign-out-alt"></i> <span>Cerrar
+                                Sesión</span></a></li>
+                </ul>
+            </nav>
+
+            <main class="main-content">
+                <header class="top-header">
+                    <div class="header-title">
+                        <h1>Reportes del Sistema</h1>
+                        <p>Visualiza y genera reportes de bitácoras y
+                            docentes</p>
+                    </div>
+                    <div class="user-profile">
+                        <span>Administrador</span>
+                        <div class="avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    </div>
+                </header>
+
+                <div class="content-area">
+                    <section class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-file-alt"></i> Reportes
+                                Disponibles</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="reports-grid">
+                                <div class="report-card">
+                                    <div class="report-icon">
+                                        <i class="fas fa-calendar-check"></i>
+                                    </div>
+                                    <div class="report-info">
+                                        <h3>Reporte de Semestre</h3>
+                                        <p>Genera un reporte completo de un
+                                            semestre específico</p>
+                                        <button id="btnReporteSemestre"
+                                            class="btn btn-primary">
+                                            <i class="fas fa-file-export"></i>
+                                            Generar
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="report-card">
+                                    <div class="report-icon">
+                                        <i class="fas fa-user-graduate"></i>
+                                    </div>
+                                    <div class="report-info">
+                                        <h3>Reporte de Docentes</h3>
+                                        <p>Genera un reporte de todos los
+                                            docentes registrados</p>
+                                        <button id="btnReporteDocentes"
+                                            class="btn btn-primary">
+                                            <i class="fas fa-file-export"></i>
+                                            Generar
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="report-card">
+                                    <div class="report-icon">
+                                        <i class="fas fa-tasks"></i>
+                                    </div>
+                                    <div class="report-info">
+                                        <h3>Reporte de Requisitos</h3>
+                                        <p>Genera un reporte de cumplimiento de
+                                            requisitos</p>
+                                        <button id="btnReporteRequisitos"
+                                            class="btn btn-primary">
+                                            <i class="fas fa-file-export"></i>
+                                            Generar
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="report-card">
+                                    <div class="report-icon">
+                                        <i class="fas fa-chart-pie"></i>
+                                    </div>
+                                    <div class="report-info">
+                                        <h3>Estadísticas Generales</h3>
+                                        <p>Visualiza estadísticas generales del
+                                            sistema</p>
+                                        <button id="btnEstadisticas"
+                                            class="btn btn-primary">
+                                            <i class="fas fa-chart-bar"></i>
+                                            Visualizar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="card" id="reportePreview"
+                        style="display: none;">
+                        <div class="card-header">
+                            <h2><i class="fas fa-file-alt"></i> <span
+                                    id="reporteTitle">Vista Previa del
+                                    Reporte</span></h2>
+                            <div>
+                                <button id="btnImprimir"
+                                    class="btn btn-secondary">
+                                    <i class="fas fa-print"></i> Imprimir
+                                </button>
+                                <button id="btnExportarPDF"
+                                    class="btn btn-primary">
+                                    <i class="fas fa-file-pdf"></i> Exportar PDF
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="reporteContenido"
+                                class="reporte-contenido">
+                                <!-- El contenido del reporte se cargará aquí -->
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </main>
+        </div>
+
+        <!-- Modal para seleccionar semestre -->
+        <div id="modalSeleccionarSemestre" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2><i class="fas fa-calendar-alt"></i> Seleccionar
+                        Semestre</h2>
+                    <button class="btn-close" id="btnCerrarModalSemestre">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Seleccione el semestre para el cual desea generar el
+                        reporte:</p>
+                    <div class="form-group">
+                        <select id="selectSemestre" class="form-select">
+                            <option value>Seleccione un semestre</option>
+                            <!-- Las opciones se cargarán dinámicamente -->
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button id="btnContinuarSeleccionDocentes"
+                            class="btn btn-primary">
+                            <i class="fas fa-arrow-right"></i> Continuar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para seleccionar docentes -->
+        <div id="modalSeleccionarDocentes" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2><i class="fas fa-user-tie"></i> Seleccionar
+                        Docentes</h2>
+                    <button class="btn-close" id="btnCerrarModalDocentes">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Seleccione los docentes que desea incluir en el
+                        reporte:</p>
+                    <div class="form-group">
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="checkTodosDocentes">
+                            Seleccionar todos
+                        </label>
+                    </div>
+                    <div id="listaDocentesSemestre" class="checkbox-list">
+                        <!-- Las opciones se cargarán dinámicamente -->
+                    </div>
+                    <div class="form-actions">
+                        <button id="btnVolverSeleccionSemestre"
+                            class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Volver
+                        </button>
+                        <button id="btnContinuarSeleccionRequisitos"
+                            class="btn btn-primary">
+                            <i class="fas fa-arrow-right"></i> Continuar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para seleccionar requisitos -->
+        <div id="modalSeleccionarRequisitos" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2><i class="fas fa-clipboard-list"></i> Seleccionar Estado
+                        de Requisitos</h2>
+                    <button class="btn-close" id="btnCerrarModalRequisitos">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Seleccione los estados de requisitos que desea incluir en
+                        el reporte:</p>
+                    <div class="form-group">
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="checkTodosRequisitos"
+                                checked> Todos los estados
+                        </label>
+                    </div>
+                    <div class="checkbox-list">
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="estadoRequisito"
+                                value="Cumple"> Cumple
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="estadoRequisito"
+                                value="No Cumple"> No Cumple
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="estadoRequisito"
+                                value="Incompleto"> Incompleto
+                        </label>
+                    </div>
+                    <div class="form-actions">
+                        <button id="btnVolverSeleccionDocentes"
+                            class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Volver
+                        </button>
+                        <button id="btnGenerarReporteSemestre"
+                            class="btn btn-primary">
+                            <i class="fas fa-file-export"></i> Generar Reporte
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="toast-container"></div>
+
+        <!-- Primero cargar print-utils.js -->
+        <script src="../js/print-utils.js"></script>
+        <!-- Luego cargar reportes.js -->
+        <script src="../js/reportes.js"></script>
+    </body>
+</html>

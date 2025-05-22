@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Impresión de Reporte</title>
+        <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .print-header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .print-header h1 {
+            margin: 0;
+            color: #1e40af;
+            font-size: 24px;
+        }
+        .print-header p {
+            margin: 5px 0;
+            color: #666;
+            font-size: 14px;
+        }
+        .print-content {
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .status-success {
+            color: #10b981;
+        }
+        .status-warning {
+            color: #f59e0b;
+        }
+        .status-danger {
+            color: #ef4444;
+        }
+        .print-footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+        @media print {
+            body {
+                padding: 0;
+                margin: 0;
+            }
+            .print-header, .print-content, .print-footer {
+                width: 100%;
+            }
+        }
+    </style>
+    </head>
+    <body>
+        <div class="print-header">
+            <h1 id="print-title">Reporte</h1>
+            <p>Fecha de generación: <span id="print-date"></span></p>
+            <p id="print-period"></p>
+        </div>
+
+        <div class="print-content" id="print-content">
+            <!-- El contenido del reporte se insertará aquí -->
+        </div>
+
+        <div class="print-footer">
+            <p>Sistema Académico - Reporte generado automáticamente</p>
+        </div>
+
+        <script>
+        // Esta función será llamada desde la página principal
+        function initPrintPage(data) {
+            document.getElementById('print-title').textContent = data.title || 'Reporte';
+            document.getElementById('print-date').textContent = new Date().toLocaleDateString();
+            
+            if (data.period) {
+                document.getElementById('print-period').textContent = 'Período: ' + data.period;
+            } else {
+                document.getElementById('print-period').style.display = 'none';
+            }
+            
+            document.getElementById('print-content').innerHTML = data.content || '';
+            
+            // Imprimir automáticamente
+            setTimeout(() => {
+                window.print();
+                // Cerrar después de imprimir
+                setTimeout(() => {
+                    window.close();
+                }, 1000);
+            }, 500);
+        }
+    </script>
+    </body>
+</html>
