@@ -17,7 +17,7 @@ Antes de comenzar, asegúrate de tener instalado lo siguiente en tu sistema:
 3. Ejecuta el instalador descargado
 4. Sigue las instrucciones del asistente de instalación
 5. Asegúrate de instalar Apache, MySQL y PHP
-6. Una vez instalado, inicia XAMPP Control Panel
+6. Una vez instalado, inicia XAMPP Control Panel como administrador
 
 ### 2. Instalar Visual Studio Code
 
@@ -66,6 +66,7 @@ git --version
 C:\xampp\htdocs\NahimWeb
 \`\`\`
 
+Nota: Debes buscar la carpeta xampp, luego htdocs y crear dentro la carpeta NahimWeb o el nombre que gustes darle.
 ### 2. Abrir Visual Studio Code
 
 1. Abre Visual Studio Code
@@ -79,7 +80,7 @@ C:\xampp\htdocs\NahimWeb
 Una vez que tengas Visual Studio Code abierto con la carpeta `NahimWeb`:
 
 #### Opción 1: Usando la terminal integrada de VS Code
-1. Abre la terminal integrada: `View` → `Terminal` (o presiona `Ctrl + ` `)
+1. Abre la terminal integrada: `View` → `Terminal` (o presiona `Ctrl + `Ñ`)
 2. Asegúrate de estar en la ruta correcta: `C:\xampp\htdocs\NahimWeb`
 3. Ejecuta el siguiente comando:
 
