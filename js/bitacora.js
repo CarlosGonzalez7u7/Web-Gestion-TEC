@@ -1,4 +1,11 @@
-const BASE_URL = "https://tecuruapan.edu.mx/iscasd/";
+const BASE_URL = "../";
+let editarSemestreId = null;
+
+// Para mostrar estado de carga
+document.getElementById('btnEditarDocentes').classList.add('loading');
+
+// Para quitar estado de carga
+document.getElementById('btnEditarDocentes').classList.remove('loading');
 
 document.addEventListener("DOMContentLoaded", () => {
   cargarSemestres();
@@ -74,6 +81,8 @@ document.addEventListener("DOMContentLoaded", () => {
   btnConfirmarEliminar.addEventListener("click", () => {
     ejecutarEliminarSemestre();
   });
+
+
 });
 
 // Función para debounce (evitar múltiples llamadas durante la escritura)
@@ -180,6 +189,17 @@ function cargarSemestres() {
           mostrarConfirmacionEliminar(sem.ID_semestre, sem.nomSem);
         };
         actions.appendChild(btnEliminar);
+
+        // Botón de editar nombre de semestre
+        const btnEditar = document.createElement("button");
+        btnEditar.innerHTML = `<i class="fas fa-edit"></i> Editar`;
+        btnEditar.classList.add("btn-editar");
+        btnEditar.onclick = (e) => {
+          e.stopPropagation();
+          mostrarEditarSemestreModal(sem.ID_semestre, sem.nomSem);
+        };
+        actions.appendChild(btnEditar);
+
 
         li.appendChild(actions);
         lista.appendChild(li);
@@ -299,6 +319,13 @@ function configurarBotonesAccion() {
   if (btnEliminarSemestre) {
     btnEliminarSemestre.addEventListener("click", eliminarSemestre);
   }
+
+  // Botón para editar los requisitos
+  const btnEditarRequisitos = document.getElementById("btnEditarRequisitos");
+  if (btnEditarRequisitos) {
+    btnEditarRequisitos.addEventListener("click", mostrarEditarRequisitosModal);
+  }
+
 }
 
 function mostrarBitacora() {
@@ -343,9 +370,8 @@ function mostrarBitacora() {
       // Ahora los docentes van en las filas
       docentes.forEach((doc) => {
         html += `<tr class="docente-row" data-docente="${doc.nombre.toLowerCase()} ${doc.AP_Paterno.toLowerCase()}">
-                  <td class="docente-name">${doc.nombre} ${
-          doc.AP_Paterno
-        }</td>`;
+                  <td class="docente-name">${doc.nombre} ${doc.AP_Paterno
+          }</td>`;
 
         // Para cada requisito, creamos una celda
         requisitos.forEach((req) => {
@@ -368,25 +394,20 @@ function mostrarBitacora() {
 
           html += `
             <td class="${estadoClass}">
-              <select onchange="actualizarEstado(${semestreSeleccionado}, ${
-            doc.ID_docente
-          }, ${req.ID_requisitos}, this)">
-                <option value="Cumple" ${
-                  celda.estado === "Cumple" ? "selected" : ""
-                }>✅ Cumple</option>
-                <option value="No Cumple" ${
-                  celda.estado === "No Cumple" ? "selected" : ""
-                }>❌ No Cumple</option>
-                <option value="Incompleto" ${
-                  celda.estado === "Incompleto" ? "selected" : ""
-                }>⚠️ Incompleto</option>
+              <select onchange="actualizarEstado(${semestreSeleccionado}, ${doc.ID_docente
+            }, ${req.ID_requisitos}, this)">
+                <option value="Cumple" ${celda.estado === "Cumple" ? "selected" : ""
+            }>✅ Cumple</option>
+                <option value="No Cumple" ${celda.estado === "No Cumple" ? "selected" : ""
+            }>❌ No Cumple</option>
+                <option value="Incompleto" ${celda.estado === "Incompleto" ? "selected" : ""
+            }>⚠️ Incompleto</option>
               </select>
               <textarea 
                 rows="2" 
                 placeholder="Agregar comentario..." 
-                onchange="actualizarComentario(${semestreSeleccionado}, ${
-            doc.ID_docente
-          }, ${req.ID_requisitos}, this)"
+                onchange="actualizarComentario(${semestreSeleccionado}, ${doc.ID_docente
+            }, ${req.ID_requisitos}, this)"
               >${celda.comentario || ""}</textarea>
             </td>`;
         });
@@ -547,54 +568,50 @@ function eliminarSemestre() {
 
 // Función para mostrar el modal de edición de docentes
 function mostrarEditarDocentesModal() {
-  // Cargar todos los docentes disponibles
   fetch(`${BASE_URL}php/docentes/leer_docentes.php`)
-    .then((res) => res.json())
-    .then((todosDocentes) => {
-      const listaDocentesActuales = document.getElementById(
-        "listaDocentesActuales"
-      );
-      const listaDocentesDisponibles = document.getElementById(
-        "listaDocentesDisponibles"
-      );
+    .then(res => res.json())
+    .then(todosDocentes => {
+      const listaAct = document.getElementById("listaDocentesActuales");
+      const listaDisp = document.getElementById("listaDocentesDisponibles");
+      listaAct.innerHTML = "";
+      listaDisp.innerHTML = "";
 
-      listaDocentesActuales.innerHTML = "";
-      listaDocentesDisponibles.innerHTML = "";
-
-      // IDs de docentes actuales
-      const docentesActualesIds = docentesSemestre.map((d) => d.ID_docente);
-
-      // Mostrar docentes actuales
-      docentesSemestre.forEach((docente) => {
+      // Mostrar actuales
+      docentesSemestre.forEach(d => {
         const label = document.createElement("label");
         label.className = "checkbox-item";
         label.innerHTML = `
-          <input type="checkbox" value="${docente.ID_docente}" checked> 
-          ${docente.nombre} ${docente.AP_Paterno}
+          <input type="checkbox" value="${d.ID_docente}" checked>
+          ${d.nombre} ${d.AP_Paterno}
         `;
-        listaDocentesActuales.appendChild(label);
+        listaAct.appendChild(label);
       });
 
-      // Mostrar docentes disponibles (que no están en el semestre)
-      todosDocentes.forEach((docente) => {
-        if (!docentesActualesIds.includes(docente.ID_docente)) {
+      // DEBUG: ver IDs antes de filtrar
+      console.log("docentesSemestre:", docentesSemestre.map(d => d.ID_docente));
+      console.log("todosDocentes:   ", todosDocentes.map(d => d.ID_docente));
+
+      // Filtrar con .some()
+      todosDocentes
+        .filter(td =>
+          !docentesSemestre.some(ds => ds.ID_docente == td.ID_docente)
+        )
+        .forEach(doc => {
           const label = document.createElement("label");
           label.className = "checkbox-item";
           label.innerHTML = `
-            <input type="checkbox" value="${docente.ID_docente}"> 
-            ${docente.nombre} ${docente.AP_Paterno}
+            <input type="checkbox" value="${doc.ID_docente}">
+            ${doc.nombre} ${doc.AP_Paterno}
           `;
-          listaDocentesDisponibles.appendChild(label);
-        }
-      });
+          listaDisp.appendChild(label);
+        });
 
-      // Mostrar el modal
       document.getElementById("editarDocentesModal").style.display = "flex";
     })
-    .catch((error) => {
-      showToast("Error al cargar los docentes", "error");
-    });
+    .catch(() => showToast("Error al cargar los docentes", "error"));
 }
+
+
 
 // Función para guardar los cambios en la edición de docentes
 function guardarEdicionDocentes() {
@@ -673,3 +690,164 @@ styleElement.textContent = `
   }
 `;
 document.head.appendChild(styleElement);
+
+// 2) Listener para cerrar el modal de requisitos
+document
+  .getElementById("btnCerrarEditarRequisitos")
+  .addEventListener("click", () => {
+    document.getElementById("editarRequisitosModal").style.display = "none";
+  });
+
+// 3) Función para abrir y renderizar el modal de edición de requisitos
+function mostrarEditarRequisitosModal() {
+  fetch(`${BASE_URL}php/requisitos/leer_requisitos.php`)
+    .then(res => res.json())
+    .then(todosRequisitos => {
+      const listaAct = document.getElementById("listaRequisitosActuales");
+      const listaDisp = document.getElementById("listaRequisitosDisponibles");
+      listaAct.innerHTML = "";
+      listaDisp.innerHTML = "";
+
+      // Requisitos que ya están en el semestre
+      requisitosSemestre.forEach(r => {
+        const label = document.createElement("label");
+        label.className = "checkbox-item";
+        label.innerHTML = `
+          <input type="checkbox" value="${r.ID_requisitos}" checked>
+          ${r.requisitoTipo}
+        `;
+        listaAct.appendChild(label);
+      });
+
+      // Filtrar los que faltan y mostrarlos como disponibles
+      todosRequisitos
+        .filter(tr => !requisitosSemestre.some(rs => rs.ID_requisitos == tr.ID_requisitos))
+        .forEach(r => {
+          const label = document.createElement("label");
+          label.className = "checkbox-item";
+          label.innerHTML = `
+            <input type="checkbox" value="${r.ID_requisitos}">
+            ${r.requisitoTipo}
+          `;
+          listaDisp.appendChild(label);
+        });
+
+      document.getElementById("editarRequisitosModal").style.display = "flex";
+    })
+    .catch(() => showToast("Error al cargar requisitos", "error"));
+}
+
+// 4) Función para guardar los cambios de requisitos
+function guardarEdicionRequisitos() {
+  const reqActuales = Array.from(
+    document.querySelectorAll("#listaRequisitosActuales input:checked")
+  ).map(i => i.value);
+
+  const reqNuevos = Array.from(
+    document.querySelectorAll("#listaRequisitosDisponibles input:checked")
+  ).map(i => i.value);
+
+  const todosReq = [...reqActuales, ...reqNuevos];
+  if (todosReq.length === 0) {
+    return showToast("Debes seleccionar al menos un requisito", "warning");
+  }
+
+  // Nuevo: obtener también todos los docentes que siguen asignados
+  const todosDocentes = docentesSemestre.map(d => d.ID_docente);
+
+  const formData = new FormData();
+  formData.append("ID_semestre", semestreSeleccionado);
+  formData.append("docentes", JSON.stringify(todosDocentes));           // ← lo agregamos
+  formData.append("requisitos", JSON.stringify(todosReq));
+  formData.append("actualizarRequisitos", "true");
+
+  fetch(`${BASE_URL}php/bitacora/actualizar_requisitos_semestre.php`, {
+    method: "POST",
+    body: formData,
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        showToast("Requisitos actualizados correctamente", "success");
+        document.getElementById("editarRequisitosModal").style.display = "none";
+        mostrarBitacora();
+      } else {
+        showToast(data.message || "Error al actualizar requisitos", "error");
+      }
+    })
+    .catch(() => showToast("Error al actualizar requisitos", "error"));
+}
+
+function toggleSection(containerId, masterCheckbox) {
+  const cont = document.getElementById(containerId);
+  const checks = cont.querySelectorAll('input[type="checkbox"]');
+
+  if (masterCheckbox.checked) {
+    // 1) Seleccionar todos
+    checks.forEach(cb => {
+      cb.checked = true;
+      cb.disabled = true;        // ← bloquear cada casilla
+    });
+    // 2) Bloquear visualmente el contenedor
+    cont.classList.add('disabled');
+  } else {
+    // 1) Deshabilitar el bloqueo visual
+    cont.classList.remove('disabled');
+    // 2) Deseleccionar y desbloquear cada casilla
+    checks.forEach(cb => {
+      cb.checked = false;
+      cb.disabled = false;       // ← volver a habilitar
+    });
+  }
+}
+
+document.getElementById('masterDocentes')
+  .addEventListener('change', () =>
+    toggleSection('checkDocentes', document.getElementById('masterDocentes'))
+  );
+
+document.getElementById('masterRequisitos')
+  .addEventListener('change', () =>
+    toggleSection('checkRequisitos', document.getElementById('masterRequisitos'))
+  );
+
+function mostrarEditarSemestreModal(id, nombre) {
+  editarSemestreId = id;
+  document.getElementById("editNomSem").value = nombre;
+  document.getElementById("editarSemestreModal").style.display = "flex";
+}
+
+document
+  .getElementById("btnCerrarEditarSemestre")
+  .addEventListener("click", () => {
+    document.getElementById("editarSemestreModal").style.display = "none";
+  });
+
+  document
+  .getElementById("formEditarSemestre")
+  .addEventListener("submit", function(e) {
+    e.preventDefault();
+    const nuevoNombre = document.getElementById("editNomSem").value.trim();
+    if (!nuevoNombre) return;
+
+    const formData = new FormData();
+    formData.append("ID_semestre", editarSemestreId);
+    formData.append("nomSem", nuevoNombre);
+
+    fetch(`${BASE_URL}php/bitacora/editar_semestre.php`, {
+      method: "POST",
+      body: formData
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          showToast("Semestre actualizado", "success");
+          document.getElementById("editarSemestreModal").style.display = "none";
+          cargarSemestres(); // refresca la lista con el nuevo nombre
+        } else {
+          showToast(data.message || "Error al editar semestre", "error");
+        }
+      })
+      .catch(() => showToast("Error de red al editar semestre", "error"));
+  });
+

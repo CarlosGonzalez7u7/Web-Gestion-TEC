@@ -791,3 +791,16 @@ textarea {
         width: 100%;
     }
 }
+
+.checkbox-list.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.select-all-master {
+  margin-bottom: 0.5rem;
+}
+.select-all-master label {
+  cursor: pointer;
+  user-select: none;
+}
+

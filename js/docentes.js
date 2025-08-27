@@ -1,4 +1,11 @@
-const BASE_URL = "https://tecuruapan.edu.mx/iscasd/";
+const BASE_URL = "../";
+const modalConfirm     = document.getElementById("modalConfirm");
+const confirmTitle     = document.getElementById("confirmTitle");
+const confirmMessage   = document.getElementById("confirmMessage");
+const btnConfirmOk     = document.getElementById("confirmOk");
+const btnConfirmCancel = document.getElementById("confirmCancel");
+const btnConfirmClose  = document.getElementById("confirmClose");
+
 document.addEventListener("DOMContentLoaded", () => {
   cargarDocentes();
   cargarRequisitos();
@@ -386,52 +393,70 @@ function buscarRequisitos() {
 // Abrir modal para editar requisito
 function abrirEdicionRequisito(id) {
   fetch(`${BASE_URL}php/requisitos/leer_requisitos.php?id=${id}`)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Error en la petición");
-      }
-      return response.json();
+    .then((res) => {
+      if (!res.ok) throw new Error("Error en la petición");
+      return res.json();
     })
     .then((data) => {
-      document.getElementById("modalRequisitoTitle").textContent =
-        "Editar Requisito";
-      document.getElementById("requisito_id").value = data.ID_requisitos;
-      document.getElementById("requisitoTipo").value = data.requisitoTipo;
-
+      // data ahora es un objeto { ID_requisitos: ..., requisitoTipo: ... }
+      document.getElementById("modalRequisitoTitle").textContent = "Editar Requisito";
+      document.getElementById("requisito_id").value      = data.ID_requisitos;
+      document.getElementById("requisitoTipo").value     = data.requisitoTipo;
       document.getElementById("modalRequisito").style.display = "block";
     })
-    .catch((error) => {
-      console.error("Error:", error);
+    .catch((err) => {
+      console.error(err);
       showToast("Error al cargar los datos del requisito", "error");
     });
 }
 
-// Eliminar requisito
+
 function eliminarRequisito(id) {
-  if (confirm("¿Estás seguro de eliminar este requisito?")) {
+  // Configura el texto del modal
+  confirmTitle.textContent   = "Eliminar requisito";
+  confirmMessage.textContent = "¿Seguro que quieres eliminar este requisito?";
+  btnConfirmOk.textContent   = "Sí, eliminar";
+
+  // Abre el modal
+  modalConfirm.style.display = "flex";
+
+  // Manejadores temporales
+  function onOk() {
+    // Llama al endpoint sólo al confirmar
     fetch(`${BASE_URL}php/requisitos/eliminar_requisito.php?id=${id}`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Error en la petición");
-        }
-        return response.json();
+      .then(res => {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
       })
-      .then((data) => {
-        if (data.success) {
+      .then(json => {
+        if (json.success) {
           showToast("Requisito eliminado correctamente", "success");
           cargarRequisitos();
         } else {
-          showToast(data.message || "Error al eliminar el requisito", "error");
+          showToast(json.error || "Error al eliminar", "error");
         }
       })
-      .catch((error) => {
-        console.error("Error:", error);
+      .catch(err => {
+        console.error(err);
         showToast("Error al eliminar el requisito", "error");
-      });
+      })
+      .finally(closeModal);
   }
+  function onCancel() {
+    closeModal();
+  }
+  function closeModal() {
+    modalConfirm.style.display = "none";
+    btnConfirmOk.removeEventListener("click", onOk);
+    btnConfirmCancel.removeEventListener("click", onCancel);
+    btnConfirmClose.removeEventListener("click", onCancel);
+  }
+
+  btnConfirmOk.addEventListener("click", onOk);
+  btnConfirmCancel.addEventListener("click", onCancel);
+  btnConfirmClose.addEventListener("click", onCancel);
 }
 
-// Guardar requisito (crear o actualizar)
 document
   .getElementById("formRequisito")
   .addEventListener("submit", function (e) {
@@ -440,7 +465,6 @@ document
     const formData = new FormData(this);
     const requisitoId = document.getElementById("requisito_id").value;
 
-    // URL y mensaje según sea crear o actualizar
     const url = requisitoId
       ? "../php/requisitos/actualizar_requisito.php"
       : "../php/requisitos/crear_requisito.php";
@@ -474,14 +498,12 @@ document
       });
   });
 
-// Búsqueda en tiempo real para docentes
 document.getElementById("busqueda").addEventListener("input", function () {
   if (this.value.length >= 2 || this.value === "") {
     buscarDocentes();
   }
 });
 
-// Búsqueda en tiempo real para requisitos
 document
   .getElementById("busquedaRequisito")
   .addEventListener("input", function () {

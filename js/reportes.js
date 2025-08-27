@@ -1,4 +1,4 @@
-const BASE_URL = "https://tecuruapan.edu.mx/iscasd/";
+const BASE_URL = "../";
 document.addEventListener("DOMContentLoaded", () => {
   // Inicialización de la página
   console.log("Página de reportes cargada");
