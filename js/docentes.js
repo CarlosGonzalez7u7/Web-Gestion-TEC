@@ -1,10 +1,10 @@
 const BASE_URL = "../";
-const modalConfirm     = document.getElementById("modalConfirm");
-const confirmTitle     = document.getElementById("confirmTitle");
-const confirmMessage   = document.getElementById("confirmMessage");
-const btnConfirmOk     = document.getElementById("confirmOk");
+const modalConfirm = document.getElementById("modalConfirm");
+const confirmTitle = document.getElementById("confirmTitle");
+const confirmMessage = document.getElementById("confirmMessage");
+const btnConfirmOk = document.getElementById("confirmOk");
 const btnConfirmCancel = document.getElementById("confirmCancel");
-const btnConfirmClose  = document.getElementById("confirmClose");
+const btnConfirmClose = document.getElementById("confirmClose");
 
 document.addEventListener("DOMContentLoaded", () => {
   cargarDocentes();
@@ -43,16 +43,28 @@ function configurarModales() {
     "btnCerrarModalDocente"
   );
 
-  btnNuevoDocente.addEventListener("click", () => {
-    document.getElementById("modalDocenteTitle").textContent = "Nuevo Docente";
-    document.getElementById("formDocente").reset();
-    document.getElementById("docente_id").value = "";
-    modalDocente.style.display = "block";
-  });
+  // Asegurar que los modales estén cerrados al inicio
+  if (modalDocente) modalDocente.style.display = "none";
 
-  btnCerrarModalDocente.addEventListener("click", () => {
-    modalDocente.style.display = "none";
-  });
+  if (btnNuevoDocente) {
+    btnNuevoDocente.onclick = function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById("modalDocenteTitle").textContent =
+        "Nuevo Docente";
+      document.getElementById("formDocente").reset();
+      document.getElementById("docente_id").value = "";
+      modalDocente.style.display = "block";
+    };
+  }
+
+  if (btnCerrarModalDocente) {
+    btnCerrarModalDocente.onclick = function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      modalDocente.style.display = "none";
+    };
+  }
 
   // Modal de Requisitos
   const modalRequisito = document.getElementById("modalRequisito");
@@ -61,27 +73,28 @@ function configurarModales() {
     "btnCerrarModalRequisito"
   );
 
-  btnNuevoRequisito.addEventListener("click", () => {
-    document.getElementById("modalRequisitoTitle").textContent =
-      "Nuevo Requisito";
-    document.getElementById("formRequisito").reset();
-    document.getElementById("requisito_id").value = "";
-    modalRequisito.style.display = "block";
-  });
+  // Asegurar que los modales estén cerrados al inicio
+  if (modalRequisito) modalRequisito.style.display = "none";
 
-  btnCerrarModalRequisito.addEventListener("click", () => {
-    modalRequisito.style.display = "none";
-  });
+  if (btnNuevoRequisito) {
+    btnNuevoRequisito.onclick = function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById("modalRequisitoTitle").textContent =
+        "Nuevo Requisito";
+      document.getElementById("formRequisito").reset();
+      document.getElementById("requisito_id").value = "";
+      modalRequisito.style.display = "block";
+    };
+  }
 
-  // Cerrar modales al hacer clic fuera
-  window.addEventListener("click", (event) => {
-    if (event.target === modalDocente) {
-      modalDocente.style.display = "none";
-    }
-    if (event.target === modalRequisito) {
+  if (btnCerrarModalRequisito) {
+    btnCerrarModalRequisito.onclick = function (e) {
+      e.preventDefault();
+      e.stopPropagation();
       modalRequisito.style.display = "none";
-    }
-  });
+    };
+  }
 }
 
 // ==================== DOCENTES ====================
@@ -399,9 +412,10 @@ function abrirEdicionRequisito(id) {
     })
     .then((data) => {
       // data ahora es un objeto { ID_requisitos: ..., requisitoTipo: ... }
-      document.getElementById("modalRequisitoTitle").textContent = "Editar Requisito";
-      document.getElementById("requisito_id").value      = data.ID_requisitos;
-      document.getElementById("requisitoTipo").value     = data.requisitoTipo;
+      document.getElementById("modalRequisitoTitle").textContent =
+        "Editar Requisito";
+      document.getElementById("requisito_id").value = data.ID_requisitos;
+      document.getElementById("requisitoTipo").value = data.requisitoTipo;
       document.getElementById("modalRequisito").style.display = "block";
     })
     .catch((err) => {
@@ -410,12 +424,11 @@ function abrirEdicionRequisito(id) {
     });
 }
 
-
 function eliminarRequisito(id) {
   // Configura el texto del modal
-  confirmTitle.textContent   = "Eliminar requisito";
+  confirmTitle.textContent = "Eliminar requisito";
   confirmMessage.textContent = "¿Seguro que quieres eliminar este requisito?";
-  btnConfirmOk.textContent   = "Sí, eliminar";
+  btnConfirmOk.textContent = "Sí, eliminar";
 
   // Abre el modal
   modalConfirm.style.display = "flex";
@@ -424,11 +437,11 @@ function eliminarRequisito(id) {
   function onOk() {
     // Llama al endpoint sólo al confirmar
     fetch(`${BASE_URL}php/requisitos/eliminar_requisito.php?id=${id}`)
-      .then(res => {
+      .then((res) => {
         if (!res.ok) throw new Error("HTTP " + res.status);
         return res.json();
       })
-      .then(json => {
+      .then((json) => {
         if (json.success) {
           showToast("Requisito eliminado correctamente", "success");
           cargarRequisitos();
@@ -436,7 +449,7 @@ function eliminarRequisito(id) {
           showToast(json.error || "Error al eliminar", "error");
         }
       })
-      .catch(err => {
+      .catch((err) => {
         console.error(err);
         showToast("Error al eliminar el requisito", "error");
       })
@@ -514,7 +527,20 @@ document
 
 // Función para desplazarse a la sección de requisitos
 function scrollToRequisitos(event) {
-  event.preventDefault();
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  // Asegurarse de que no se abran los modales
+  const modalDocente = document.getElementById("modalDocente");
+  const modalRequisito = document.getElementById("modalRequisito");
+
+  if (modalDocente) modalDocente.style.display = "none";
+  if (modalRequisito) modalRequisito.style.display = "none";
+
   const requisitosSection = document.getElementById("requisitos-section");
-  requisitosSection.scrollIntoView({ behavior: "smooth" });
+  if (requisitosSection) {
+    requisitosSection.scrollIntoView({ behavior: "smooth" });
+  }
 }
