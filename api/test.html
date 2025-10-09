@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pruebas API - Sistema Académico</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .test-section h3 {
+            color: #333;
+            margin-top: 0;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        
+        .btn:hover {
+            background: #0056b3;
+        }
+        
+        .btn.success {
+            background: #28a745;
+        }
+        
+        .btn.danger {
+            background: #dc3545;
+        }
+        
+        .btn.warning {
+            background: #ffc107;
+            color: #000;
+        }
+        
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 5px;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .result.success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        
+        .result.error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        
+        .login-form {
+            margin-bottom: 20px;
+        }
+        
+        .login-form input {
+            margin: 5px 10px 5px 0;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-indicator.connected {
+            background-color: #28a745;
+        }
+        
+        .status-indicator.disconnected {
+            background-color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Pruebas de la API - Sistema Académico</h1>
+        
+        <div id="status-section" class="test-section">
+            <h3>
+                <span id="status-indicator" class="status-indicator disconnected"></span>
+                Estado de la API
+            </h3>
+            <button class="btn" onclick="checkApiStatus()">Verificar Estado de la API</button>
+            <div id="status-result" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔐 Autenticación</h3>
+            <div class="login-form">
+                <input type="text" id="username" placeholder="Usuario" value="admin">
+                <input type="password" id="password" placeholder="Contraseña" value="">
+                <button class="btn success" onclick="login()">Iniciar Sesión</button>
+                <button class="btn warning" onclick="checkSession()">Verificar Sesión</button>
+                <button class="btn danger" onclick="logout()">Cerrar Sesión</button>
+            </div>
+            <div id="auth-result" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>👨‍🏫 Gestión de Docentes</h3>
+            <button class="btn" onclick="getDocentes()">Listar Docentes</button>
+            <button class="btn success" onclick="createDocente()">Crear Docente de Prueba</button>
+            <button class="btn warning" onclick="searchDocentes()">Buscar Docentes</button>
+            <div id="docentes-result" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📅 Gestión de Semestres</h3>
+            <button class="btn" onclick="getSemestres()">Listar Semestres</button>
+            <button class="btn success" onclick="createSemestre()">Crear Semestre de Prueba</button>
+            <button class="btn warning" onclick="getSemestreWithStats()">Obtener con Estadísticas</button>
+            <div id="semestres-result" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Gestión de Requisitos</h3>
+            <button class="btn" onclick="getRequisitos()">Listar Requisitos</button>
+            <button class="btn success" onclick="createRequisito()">Crear Requisito de Prueba</button>
+            <div id="requisitos-result" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Gestión de Bitácora</h3>
+            <button class="btn" onclick="getBitacoraSemestre()">Obtener Bitácora (Sem. 4)</button>
+            <button class="btn warning" onclick="getEstadisticas()">Obtener Estadísticas</button>
+            <button class="btn success" onclick="actualizarEstado()">Actualizar Estado</button>
+            <div id="bitacora-result" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/Web-Gestion-TEC/api/v1';
+        
+        // Función helper para hacer peticiones a la API
+        async function apiCall(endpoint, options = {}) {
+            const url = `${API_BASE}${endpoint}`;
+            const config = {
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                ...options
+            };
+            
+            try {
+                const response = await fetch(url, config);
+                const result = await response.json();
+                return result;
+            } catch (error) {
+                return {
+                    success: false,
+                    message: `Error de red: ${error.message}`
+                };
+            }
+        }
+        
+        // Función para mostrar resultados
+        function showResult(containerId, result, isSuccess = null) {
+            const container = document.getElementById(containerId);
+            container.style.display = 'block';
+            
+            if (isSuccess === null) {
+                isSuccess = result.success;
+            }
+            
+            container.className = `result ${isSuccess ? 'success' : 'error'}`;
+            container.innerHTML = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+        }
+        
+        // Verificar estado de la API
+        async function checkApiStatus() {
+            const result = await apiCall('/');
+            showResult('status-result', result);
+            
+            const indicator = document.getElementById('status-indicator');
+            if (result.success) {
+                indicator.className = 'status-indicator connected';
+            } else {
+                indicator.className = 'status-indicator disconnected';
+            }
+        }
+        
+        // ===== AUTENTICACIÓN =====
+        
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            const result = await apiCall('/auth/login', {
+                method: 'POST',
+                body: JSON.stringify({
+                    usernameOrEmail: username,
+                    password: password
+                })
+            });
+            
+            showResult('auth-result', result);
+        }
+        
+        async function logout() {
+            const result = await apiCall('/auth/logout', {
+                method: 'POST'
+            });
+            
+            showResult('auth-result', result);
+        }
+        
+        async function checkSession() {
+            const result = await apiCall('/auth/check', {
+                method: 'POST'
+            });
+            
+            showResult('auth-result', result);
+        }
+        
+        // ===== DOCENTES =====
+        
+        async function getDocentes() {
+            const result = await apiCall('/docentes?limit=5');
+            showResult('docentes-result', result);
+        }
+        
+        async function createDocente() {
+            const result = await apiCall('/docentes', {
+                method: 'POST',
+                body: JSON.stringify({
+                    nombre: 'Docente',
+                    AP_Paterno: 'De',
+                    AP_Materno: 'Prueba',
+                    carrera: 'Ingeniería en Sistemas'
+                })
+            });
+            
+            showResult('docentes-result', result);
+        }
+        
+        async function searchDocentes() {
+            const result = await apiCall('/docentes/search/Prueba');
+            showResult('docentes-result', result);
+        }
+        
+        // ===== SEMESTRES =====
+        
+        async function getSemestres() {
+            const result = await apiCall('/semestres');
+            showResult('semestres-result', result);
+        }
+        
+        async function createSemestre() {
+            const result = await apiCall('/semestres', {
+                method: 'POST',
+                body: JSON.stringify({
+                    nomSem: 'Semestre de Prueba API',
+                    fecha_inicio: '2025-01-01',
+                    fecha_fin: '2025-06-30'
+                })
+            });
+            
+            showResult('semestres-result', result);
+        }
+        
+        async function getSemestreWithStats() {
+            const result = await apiCall('/semestres/4/stats');
+            showResult('semestres-result', result);
+        }
+        
+        // ===== REQUISITOS =====
+        
+        async function getRequisitos() {
+            const result = await apiCall('/requisitos');
+            showResult('requisitos-result', result);
+        }
+        
+        async function createRequisito() {
+            const result = await apiCall('/requisitos', {
+                method: 'POST',
+                body: JSON.stringify({
+                    requisitoTipo: 'REQUISITO DE PRUEBA API'
+                })
+            });
+            
+            showResult('requisitos-result', result);
+        }
+        
+        // ===== BITÁCORA =====
+        
+        async function getBitacoraSemestre() {
+            const result = await apiCall('/bitacora/semestre/4');
+            showResult('bitacora-result', result);
+        }
+        
+        async function getEstadisticas() {
+            const result = await apiCall('/bitacora/estadisticas/4');
+            showResult('bitacora-result', result);
+        }
+        
+        async function actualizarEstado() {
+            const result = await apiCall('/bitacora/actualizar-estado', {
+                method: 'PUT',
+                body: JSON.stringify({
+                    ID_semestre: 4,
+                    ID_docente: 3,
+                    ID_requisito: 1,
+                    estado: 'Cumple',
+                    comentario: 'Actualizado desde pruebas de API'
+                })
+            });
+            
+            showResult('bitacora-result', result);
+        }
+        
+        // Verificar estado inicial al cargar la página
+        window.addEventListener('load', function() {
+            checkApiStatus();
+        });
+    </script>
+</body>
+</html>

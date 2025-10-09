@@ -1,4 +1,4 @@
-const BASE_URL = "../";
+// Referencias a elementos DOM
 const modalConfirm     = document.getElementById("modalConfirm");
 const confirmTitle     = document.getElementById("confirmTitle");
 const confirmMessage   = document.getElementById("confirmMessage");
@@ -6,32 +6,36 @@ const btnConfirmOk     = document.getElementById("confirmOk");
 const btnConfirmCancel = document.getElementById("confirmCancel");
 const btnConfirmClose  = document.getElementById("confirmClose");
 
-document.addEventListener("DOMContentLoaded", () => {
-  cargarDocentes();
-  cargarRequisitos();
+// Estado de la aplicación
+let currentPage = 1;
+let currentLimit = 10;
+let currentSearchTerm = '';
 
-  // Configurar modales
+document.addEventListener("DOMContentLoaded", async () => {
+  // Verificar autenticación
+  await checkAuthentication();
+  
+  // Cargar datos iniciales
+  await cargarDocentes();
+  await cargarRequisitos();
+
+  // Configurar modales y eventos
   configurarModales();
+  configurarEventos();
 });
 
-// Función para mostrar notificaciones toast
-function showToast(message, type = "info") {
-  const toastContainer = document.getElementById("toast-container");
-  const toast = document.createElement("div");
-  toast.className = `toast toast-${type}`;
-
-  let icon = "info-circle";
-  if (type === "success") icon = "check-circle";
-  if (type === "warning") icon = "exclamation-triangle";
-  if (type === "error") icon = "times-circle";
-
-  toast.innerHTML = `<i class="fas fa-${icon}"></i> ${message}`;
-  toastContainer.appendChild(toast);
-
-  // Eliminar el toast después de 3 segundos
-  setTimeout(() => {
-    toast.remove();
-  }, 3000);
+// Verificar autenticación
+async function checkAuthentication() {
+  try {
+    const result = await AuthService.checkSession();
+    if (!result || !result.success || !result.data.valid) {
+      window.location.href = '../index.html';
+      return;
+    }
+  } catch (error) {
+    console.error('Error verificando sesión:', error);
+    window.location.href = '../index.html';
+  }
 }
 
 // Configurar modales
@@ -84,79 +88,103 @@ function configurarModales() {
   });
 }
 
+// Configurar eventos adicionales
+function configurarEventos() {
+  // Formulario de docente
+  const formDocente = document.getElementById("formDocente");
+  if (formDocente) {
+    formDocente.addEventListener("submit", guardarDocente);
+  }
+
+  // Formulario de requisito
+  const formRequisito = document.getElementById("formRequisito");
+  if (formRequisito) {
+    formRequisito.addEventListener("submit", guardarRequisito);
+  }
+
+  // Búsqueda de docentes
+  const btnBuscarDocentes = document.querySelector('#docentes-section .btn-secondary');
+  if (btnBuscarDocentes) {
+    btnBuscarDocentes.addEventListener("click", buscarDocentes);
+  }
+
+  // Enter en campo de búsqueda
+  const busquedaInput = document.getElementById("busqueda");
+  if (busquedaInput) {
+    busquedaInput.addEventListener("keypress", (e) => {
+      if (e.key === 'Enter') {
+        buscarDocentes();
+      }
+    });
+  }
+
+  // Búsqueda de requisitos
+  const btnBuscarRequisitos = document.querySelector('#requisitos-section .btn-secondary');
+  if (btnBuscarRequisitos) {
+    btnBuscarRequisitos.addEventListener("click", buscarRequisitos);
+  }
+
+  // Enter en campo de búsqueda de requisitos
+  const busquedaRequisitoInput = document.getElementById("busquedaRequisito");
+  if (busquedaRequisitoInput) {
+    busquedaRequisitoInput.addEventListener("keypress", (e) => {
+      if (e.key === 'Enter') {
+        buscarRequisitos();
+      }
+    });
+  }
+
+  // Logout
+  const logoutLinks = document.querySelectorAll('a[href="../index.html"]');
+  logoutLinks.forEach(link => {
+    link.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await logout();
+    });
+  });
+}
+
 // ==================== DOCENTES ====================
 
-// Cargar docentes
-function cargarDocentes() {
-  console.log(
-    "Iniciando carga de docentes desde:",
-    `${BASE_URL}php/docentes/leer_docentes.php`
-  );
+// Cargar docentes con la nueva API
+async function cargarDocentes(search = '') {
+  try {
+    const params = {
+      page: currentPage,
+      limit: currentLimit
+    };
+    
+    if (search) {
+      params.search = search;
+    }
 
-  fetch(`${BASE_URL}php/docentes/leer_docentes.php`)
-    .then((response) => {
-      console.log("Respuesta recibida:", response.status, response.statusText);
-      console.log("Headers:", response.headers);
-
-      // Obtener el texto plano de la respuesta primero
-      return response.text().then((text) => {
-        console.log("Respuesta texto completo:", text);
-
-        // Si está vacío o es solo espacios en blanco
-        if (!text || text.trim() === "") {
-          throw new Error("Respuesta vacía del servidor");
-        }
-
-        try {
-          // Intentar parsear el texto como JSON
-          const data = JSON.parse(text);
-          return data;
-        } catch (e) {
-          console.error("Error al parsear JSON:", e);
-          throw new Error(
-            `No se pudo parsear la respuesta como JSON: ${text.substring(
-              0,
-              100
-            )}...`
-          );
-        }
-      });
-    })
-    .then((data) => {
-      console.log("Datos procesados correctamente:", data);
-      actualizarTablaDocentes(data);
-    })
-    .catch((error) => {
-      console.error("Error detallado:", error);
-      showToast("Error al cargar los docentes: " + error.message, "error");
-    });
+    const result = await DocenteService.getAll(params);
+    
+    if (result && result.success) {
+      actualizarTablaDocentes(result.data.docentes);
+      actualizarPaginacionDocentes(result.data.pagination);
+    } else {
+      UIHelpers.showToast(result?.message || "Error al cargar los docentes", "error");
+    }
+  } catch (error) {
+    console.error("Error cargando docentes:", error);
+    UIHelpers.showToast("Error al cargar los docentes", "error");
+  }
 }
 
-// Versión de debug para probar la conectividad a PHP
-function testConexion() {
-  // Crear un archivo PHP simple para pruebas
-  // test_conexion.php solo debe contener: <?php echo json_encode(['status' => 'ok']); ?>
-  fetch(`${BASE_URL}php/test_conexion.php`)
-    .then((response) => response.text())
-    .then((text) => {
-      console.log("Test de conexión:", text);
-    })
-    .catch((error) => {
-      console.error("Error en test de conexión:", error);
-    });
-}
+// Función de debug removida - ahora usando la API unificada
 
 // Actualizar tabla de docentes
-function actualizarTablaDocentes(data) {
+function actualizarTablaDocentes(docentes) {
   const tbody = document.getElementById("tbodyDocentes");
   tbody.innerHTML = "";
 
-  if (data.length === 0) {
+  if (!docentes || docentes.length === 0) {
     tbody.innerHTML = `<tr><td colspan="7" class="text-center">No se encontraron docentes</td></tr>`;
     return;
   }
 
-  data.forEach((docente) => {
+  docentes.forEach((docente) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
             <td>${docente.ID_docente}</td>
@@ -166,20 +194,22 @@ function actualizarTablaDocentes(data) {
             <td>${docente.carrera}</td>
             <td>${formatearFecha(docente.fec_Regist)}</td>
             <td>
-                <button class="btn-edit" onclick="abrirEdicionDocente(${
-                  docente.ID_docente
-                })">
+                <button class="btn-edit" onclick="abrirEdicionDocente(${docente.ID_docente})">
                     <i class="fas fa-edit"></i> Editar
                 </button>
-                <button class="btn-delete" onclick="eliminarDocente(${
-                  docente.ID_docente
-                })">
+                <button class="btn-delete" onclick="eliminarDocente(${docente.ID_docente})">
                     <i class="fas fa-trash-alt"></i> Eliminar
                 </button>
             </td>
         `;
     tbody.appendChild(tr);
   });
+}
+
+// Actualizar paginación de docentes
+function actualizarPaginacionDocentes(pagination) {
+  // Aquí puedes agregar lógica para mostrar controles de paginación
+  console.log('Paginación:', pagination);
 }
 
 // Formatear fecha
@@ -190,175 +220,155 @@ function formatearFecha(fechaStr) {
 }
 
 // Buscar docentes
-function buscarDocentes() {
-  const termino = document.getElementById("busqueda").value;
-
-  fetch(
-    `${BASE_URL}php/docentes/leer_docentes.php?search=${encodeURIComponent(
-      termino
-    )}`
-  )
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`Error en la petición: ${response.status}`);
-      }
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.indexOf("application/json") !== -1) {
-        return response.json();
-      } else {
-        return response.text().then((text) => {
-          console.error("Respuesta no JSON:", text);
-          throw new Error("La respuesta no es un JSON válido");
-        });
-      }
-    })
-    .then((data) => {
-      console.log("Datos de búsqueda:", data); // Para debug
-      actualizarTablaDocentes(data);
-      if (data.length === 0) {
-        showToast("No se encontraron docentes con ese criterio", "info");
-      }
-    })
-    .catch((error) => {
-      console.error("Error:", error);
-      showToast("Error al buscar docentes: " + error.message, "error");
-    });
+async function buscarDocentes() {
+  const termino = document.getElementById("busqueda")?.value?.trim() || '';
+  currentSearchTerm = termino;
+  currentPage = 1; // Resetear página al buscar
+  
+  try {
+    await cargarDocentes(termino);
+  } catch (error) {
+    console.error("Error en búsqueda:", error);
+    UIHelpers.showToast("Error al buscar docentes", "error");
+  }
 }
 
 // Abrir modal para editar docente
-function abrirEdicionDocente(id) {
-  fetch(`${BASE_URL}php/docentes/leer_docentes.php?id=${id}`)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Error en la petición");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      document.getElementById("modalDocenteTitle").textContent =
-        "Editar Docente";
-      document.getElementById("docente_id").value = data.ID_docente;
-      document.getElementById("nombre").value = data.nombre;
-      document.getElementById("ap_paterno").value = data.AP_Paterno;
-      document.getElementById("ap_materno").value = data.AP_Materno || "";
-      document.getElementById("carrera").value = data.carrera;
+async function abrirEdicionDocente(id) {
+  try {
+    const result = await DocenteService.getById(id);
+    
+    if (result && result.success) {
+      const docente = result.data;
+      
+      document.getElementById("modalDocenteTitle").textContent = "Editar Docente";
+      document.getElementById("docente_id").value = docente.ID_docente;
+      document.getElementById("nombre").value = docente.nombre;
+      document.getElementById("ap_paterno").value = docente.AP_Paterno;
+      document.getElementById("ap_materno").value = docente.AP_Materno || "";
+      document.getElementById("carrera").value = docente.carrera;
 
       document.getElementById("modalDocente").style.display = "block";
-    })
-    .catch((error) => {
-      console.error("Error:", error);
-      showToast("Error al cargar los datos del docente", "error");
-    });
+    } else {
+      UIHelpers.showToast(result?.message || "Error al cargar los datos del docente", "error");
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    UIHelpers.showToast("Error al cargar los datos del docente", "error");
+  }
 }
 
 // Eliminar docente
-function eliminarDocente(id) {
-  if (confirm("¿Estás seguro de eliminar este docente?")) {
-    fetch(`${BASE_URL}php/docentes/eliminar_docente.php?id=${id}`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Error en la petición");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        if (data.success) {
-          showToast("Docente eliminado correctamente", "success");
-          cargarDocentes();
-        } else {
-          showToast(data.message || "Error al eliminar el docente", "error");
-        }
-      })
-      .catch((error) => {
-        console.error("Error:", error);
-        showToast("Error al eliminar el docente", "error");
-      });
+async function eliminarDocente(id) {
+  if (!confirm("¿Estás seguro de eliminar este docente?")) {
+    return;
+  }
+
+  try {
+    const result = await DocenteService.delete(id);
+    
+    if (result && result.success) {
+      UIHelpers.showToast("Docente eliminado correctamente", "success");
+      await cargarDocentes(currentSearchTerm);
+    } else {
+      UIHelpers.showToast(result?.message || "Error al eliminar el docente", "error");
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    UIHelpers.showToast("Error al eliminar el docente", "error");
   }
 }
 
 // Guardar docente (crear o actualizar)
-document.getElementById("formDocente").addEventListener("submit", function (e) {
+async function guardarDocente(e) {
   e.preventDefault();
-
-  const formData = new FormData(this);
+  
+  const form = e.target;
+  const formData = new FormData(form);
   const docenteId = document.getElementById("docente_id").value;
 
-  // URL y mensaje según sea crear o actualizar
-  const url = docenteId
-    ? "../php/docentes/actualizar_docente.php"
-    : "../php/docentes/crear_docente.php";
-  const mensaje = docenteId
-    ? "Docente actualizado correctamente"
-    : "Docente creado correctamente";
+  const data = {
+    nombre: formData.get('nombre'),
+    AP_Paterno: formData.get('ap_paterno'),
+    AP_Materno: formData.get('ap_materno'),
+    carrera: formData.get('carrera')
+  };
 
-  fetch(url, {
-    method: "POST",
-    body: formData,
-  })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Error en la petición");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      if (data.success) {
-        showToast(mensaje, "success");
-        document.getElementById("modalDocente").style.display = "none";
-        this.reset();
-        cargarDocentes();
-      } else {
-        showToast(data.message || "Error al procesar la solicitud", "error");
-      }
-    })
-    .catch((error) => {
-      console.error("Error:", error);
-      showToast("Error al procesar la solicitud", "error");
-    });
-});
+  // Mostrar indicador de carga
+  const submitButton = form.querySelector('button[type="submit"]');
+  const hideLoading = UIHelpers.showLoading(submitButton, docenteId ? 'Actualizando...' : 'Creando...');
+
+  try {
+    let result;
+    if (docenteId) {
+      result = await DocenteService.update(docenteId, data);
+    } else {
+      result = await DocenteService.create(data);
+    }
+
+    if (result && result.success) {
+      const mensaje = docenteId ? "Docente actualizado correctamente" : "Docente creado correctamente";
+      UIHelpers.showToast(mensaje, "success");
+      document.getElementById("modalDocente").style.display = "none";
+      form.reset();
+      await cargarDocentes(currentSearchTerm);
+    } else {
+      UIHelpers.showToast(result?.message || "Error al procesar la solicitud", "error");
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    UIHelpers.showToast("Error al procesar la solicitud", "error");
+  } finally {
+    hideLoading();
+  }
+}
 
 // ==================== REQUISITOS ====================
 
 // Cargar requisitos
-function cargarRequisitos() {
-  fetch(`${BASE_URL}php/requisitos/leer_requisitos.php`)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Error en la petición");
-      }
-      return response.json();
-    })
-    .then((data) => actualizarTablaRequisitos(data))
-    .catch((error) => {
-      console.error("Error:", error);
-      showToast("Error al cargar los requisitos", "error");
-    });
+async function cargarRequisitos(search = '') {
+  try {
+    const params = {};
+    if (search) {
+      params.search = search;
+    }
+
+    const result = await RequisitoService.getAll(params);
+    
+    if (result && result.success) {
+      // El endpoint devuelve directamente el array de requisitos
+      actualizarTablaRequisitos(result.data || []);
+    } else {
+      UIHelpers.showToast(result?.message || "Error al cargar los requisitos", "error");
+    }
+  } catch (error) {
+    console.error("Error cargando requisitos:", error);
+    UIHelpers.showToast("Error al cargar los requisitos", "error");
+  }
 }
 
 // Actualizar tabla de requisitos
-function actualizarTablaRequisitos(data) {
+function actualizarTablaRequisitos(requisitos) {
   const tbody = document.getElementById("tbodyRequisitos");
+  if (!tbody) return;
+
   tbody.innerHTML = "";
 
-  if (data.length === 0) {
+  if (!requisitos || requisitos.length === 0) {
     tbody.innerHTML = `<tr><td colspan="3" class="text-center">No se encontraron requisitos</td></tr>`;
     return;
   }
 
-  data.forEach((req, index) => {
+  requisitos.forEach((requisito) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-            <td>${index + 1}</td>
-            <td>${req.requisitoTipo}</td>
+            <td>${requisito.id}</td>
+            <td>${requisito.nombre}</td>
             <td>
-                <button class="btn-edit" onclick="abrirEdicionRequisito(${
-                  req.ID_requisitos
-                })">
+                <button class="btn-edit" onclick="abrirEdicionRequisito(${requisito.id})">
                     <i class="fas fa-edit"></i> Editar
                 </button>
-                <button class="btn-delete" onclick="eliminarRequisito(${
-                  req.ID_requisitos
-                })">
+                <button class="btn-delete" onclick="eliminarRequisito(${requisito.id})">
                     <i class="fas fa-trash-alt"></i> Eliminar
                 </button>
             </td>
@@ -368,153 +378,128 @@ function actualizarTablaRequisitos(data) {
 }
 
 // Buscar requisitos
-function buscarRequisitos() {
-  const termino = document.getElementById("busquedaRequisito").value;
-
-  fetch(`${BASE_URL}php/requisitos/leer_requisitos.php?search=${termino}`)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Error en la petición");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      actualizarTablaRequisitos(data);
-      if (data.length === 0) {
-        showToast("No se encontraron requisitos con ese criterio", "info");
-      }
-    })
-    .catch((error) => {
-      console.error("Error:", error);
-      showToast("Error al buscar requisitos", "error");
-    });
+async function buscarRequisitos() {
+  const termino = document.getElementById("busquedaRequisito")?.value?.trim() || '';
+  
+  try {
+    await cargarRequisitos(termino);
+  } catch (error) {
+    console.error("Error en búsqueda:", error);
+    UIHelpers.showToast("Error al buscar requisitos", "error");
+  }
 }
 
 // Abrir modal para editar requisito
-function abrirEdicionRequisito(id) {
-  fetch(`${BASE_URL}php/requisitos/leer_requisitos.php?id=${id}`)
-    .then((res) => {
-      if (!res.ok) throw new Error("Error en la petición");
-      return res.json();
-    })
-    .then((data) => {
-      // data ahora es un objeto { ID_requisitos: ..., requisitoTipo: ... }
+async function abrirEdicionRequisito(id) {
+  try {
+    const result = await RequisitoService.getById(id);
+    
+    if (result && result.success) {
+      const requisito = result.data;
+      
       document.getElementById("modalRequisitoTitle").textContent = "Editar Requisito";
-      document.getElementById("requisito_id").value      = data.ID_requisitos;
-      document.getElementById("requisitoTipo").value     = data.requisitoTipo;
+      document.getElementById("requisito_id").value = requisito.id;  // Usar 'id' en lugar de 'ID_requisitos'
+      document.getElementById("requisitoTipo").value = requisito.nombre;  // Usar 'nombre' en lugar de 'requisitoTipo'
+
       document.getElementById("modalRequisito").style.display = "block";
-    })
-    .catch((err) => {
-      console.error(err);
-      showToast("Error al cargar los datos del requisito", "error");
-    });
-}
-
-
-function eliminarRequisito(id) {
-  // Configura el texto del modal
-  confirmTitle.textContent   = "Eliminar requisito";
-  confirmMessage.textContent = "¿Seguro que quieres eliminar este requisito?";
-  btnConfirmOk.textContent   = "Sí, eliminar";
-
-  // Abre el modal
-  modalConfirm.style.display = "flex";
-
-  // Manejadores temporales
-  function onOk() {
-    // Llama al endpoint sólo al confirmar
-    fetch(`${BASE_URL}php/requisitos/eliminar_requisito.php?id=${id}`)
-      .then(res => {
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        return res.json();
-      })
-      .then(json => {
-        if (json.success) {
-          showToast("Requisito eliminado correctamente", "success");
-          cargarRequisitos();
-        } else {
-          showToast(json.error || "Error al eliminar", "error");
-        }
-      })
-      .catch(err => {
-        console.error(err);
-        showToast("Error al eliminar el requisito", "error");
-      })
-      .finally(closeModal);
-  }
-  function onCancel() {
-    closeModal();
-  }
-  function closeModal() {
-    modalConfirm.style.display = "none";
-    btnConfirmOk.removeEventListener("click", onOk);
-    btnConfirmCancel.removeEventListener("click", onCancel);
-    btnConfirmClose.removeEventListener("click", onCancel);
-  }
-
-  btnConfirmOk.addEventListener("click", onOk);
-  btnConfirmCancel.addEventListener("click", onCancel);
-  btnConfirmClose.addEventListener("click", onCancel);
-}
-
-document
-  .getElementById("formRequisito")
-  .addEventListener("submit", function (e) {
-    e.preventDefault();
-
-    const formData = new FormData(this);
-    const requisitoId = document.getElementById("requisito_id").value;
-
-    const url = requisitoId
-      ? "../php/requisitos/actualizar_requisito.php"
-      : "../php/requisitos/crear_requisito.php";
-    const mensaje = requisitoId
-      ? "Requisito actualizado correctamente"
-      : "Requisito creado correctamente";
-
-    fetch(url, {
-      method: "POST",
-      body: formData,
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Error en la petición");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        if (data.success) {
-          showToast(mensaje, "success");
-          document.getElementById("modalRequisito").style.display = "none";
-          this.reset();
-          cargarRequisitos();
-        } else {
-          showToast(data.message || "Error al procesar la solicitud", "error");
-        }
-      })
-      .catch((error) => {
-        console.error("Error:", error);
-        showToast("Error al procesar la solicitud", "error");
-      });
-  });
-
-document.getElementById("busqueda").addEventListener("input", function () {
-  if (this.value.length >= 2 || this.value === "") {
-    buscarDocentes();
-  }
-});
-
-document
-  .getElementById("busquedaRequisito")
-  .addEventListener("input", function () {
-    if (this.value.length >= 2 || this.value === "") {
-      buscarRequisitos();
+    } else {
+      UIHelpers.showToast(result?.message || "Error al cargar los datos del requisito", "error");
     }
-  });
+  } catch (error) {
+    console.error("Error:", error);
+    UIHelpers.showToast("Error al cargar los datos del requisito", "error");
+  }
+}
 
-// Función para desplazarse a la sección de requisitos
+
+// Eliminar requisito
+async function eliminarRequisito(id) {
+  if (!confirm("¿Estás seguro de eliminar este requisito?")) {
+    return;
+  }
+
+  try {
+    const result = await RequisitoService.delete(id);
+    
+    if (result && result.success) {
+      UIHelpers.showToast("Requisito eliminado correctamente", "success");
+      await cargarRequisitos();
+    } else {
+      UIHelpers.showToast(result?.message || "Error al eliminar el requisito", "error");
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    UIHelpers.showToast("Error al eliminar el requisito", "error");
+  }
+}
+
+// Guardar requisito (crear o actualizar)
+async function guardarRequisito(e) {
+  e.preventDefault();
+  
+  const form = e.target;
+  const formData = new FormData(form);
+  const requisitoId = document.getElementById("requisito_id").value;
+
+  const data = {
+    requisitoTipo: formData.get('requisitoTipo')
+  };
+
+  // Mostrar indicador de carga
+  const submitButton = form.querySelector('button[type="submit"]');
+  const hideLoading = UIHelpers.showLoading(submitButton, requisitoId ? 'Actualizando...' : 'Creando...');
+
+  try {
+    let result;
+    if (requisitoId) {
+      result = await RequisitoService.update(requisitoId, data);
+    } else {
+      result = await RequisitoService.create(data);
+    }
+
+    if (result && result.success) {
+      const mensaje = requisitoId ? "Requisito actualizado correctamente" : "Requisito creado correctamente";
+      UIHelpers.showToast(mensaje, "success");
+      document.getElementById("modalRequisito").style.display = "none";
+      form.reset();
+      await cargarRequisitos();
+    } else {
+      UIHelpers.showToast(result?.message || "Error al procesar la solicitud", "error");
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    UIHelpers.showToast("Error al procesar la solicitud", "error");
+  } finally {
+    hideLoading();
+  }
+}
+
+// ==================== UTILIDADES ====================
+
+// Formatear fecha
+function formatearFecha(fechaStr) {
+  if (!fechaStr) return "-";
+  const fecha = new Date(fechaStr);
+  return fecha.toLocaleDateString("es-MX");
+}
+
+// Logout
+async function logout() {
+  try {
+    await AuthService.logout();
+    window.location.href = '../index.html';
+  } catch (error) {
+    console.error('Error en logout:', error);
+    // Aun si hay error, redirigir al login
+    window.location.href = '../index.html';
+  }
+}
+
+// Funciones de utilidad para scrolling suave
 function scrollToRequisitos(event) {
-  event.preventDefault();
-  const requisitosSection = document.getElementById("requisitos-section");
-  requisitosSection.scrollIntoView({ behavior: "smooth" });
+  if (event) event.preventDefault();
+  const section = document.getElementById('requisitos-section');
+  if (section) {
+    section.scrollIntoView({ behavior: 'smooth' });
+  }
 }

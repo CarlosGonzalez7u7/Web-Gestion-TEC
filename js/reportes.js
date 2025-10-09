@@ -1,5 +1,9 @@
-const BASE_URL = "../";
-document.addEventListener("DOMContentLoaded", () => {
+// Reportes.js - Sistema de reportes integrado con API REST
+
+document.addEventListener("DOMContentLoaded", async () => {
+  // Verificar autenticación
+  await checkAuthentication();
+  
   // Inicialización de la página
   console.log("Página de reportes cargada");
 
@@ -193,31 +197,27 @@ function configurarModales() {
 }
 
 // Iniciar proceso de reporte de semestre
-function iniciarReporteSemestre() {
+async function iniciarReporteSemestre() {
   showToast("Cargando semestres...", "info");
 
-  // Cargar semestres disponibles
-  fetch(`${BASE_URL}php/bitacora/leer_semestres.php`)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Error en la petición");
-      }
-      return response.json();
-    })
-    .then((data) => {
+  try {
+    // Cargar semestres usando la nueva API
+    const result = await apiClient.get('semestres', 'list');
+    
+    if (result && result.success) {
       const selectSemestre = document.getElementById("selectSemestre");
       selectSemestre.innerHTML =
         '<option value="">Seleccione un semestre</option>';
 
-      if (data.length === 0) {
+      if (result.data.length === 0) {
         showToast("No hay semestres registrados", "warning");
         return;
       }
 
-      data.forEach((semestre) => {
+      result.data.forEach((semestre) => {
         const option = document.createElement("option");
-        option.value = semestre.ID_semestre;
-        option.textContent = semestre.nomSem;
+        option.value = semestre.id;
+        option.textContent = semestre.nombre;
         selectSemestre.appendChild(option);
       });
 
@@ -225,32 +225,28 @@ function iniciarReporteSemestre() {
       document
         .getElementById("modalSeleccionarSemestre")
         .classList.add("active");
-    })
-    .catch((error) => {
-      console.error("Error:", error);
-      showToast("Error al cargar los semestres", "error");
-    });
+    } else {
+      showToast("Error al cargar semestres", "error");
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    showToast("Error al cargar los semestres", "error");
+  }
 }
 
 // Mostrar modal para seleccionar docentes
-function mostrarModalSeleccionarDocentes(semestreId) {
+async function mostrarModalSeleccionarDocentes(semestreId) {
   showToast("Cargando docentes del semestre...", "info");
 
-  // Cargar docentes del semestre seleccionado
-  fetch(
-    `${BASE_URL}php/bitacora/leer_docentes_semestre.php?ID_semestre=${semestreId}`
-  )
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Error en la petición");
-      }
-      return response.json();
-    })
-    .then((data) => {
+  try {
+    // Cargar docentes del semestre usando la nueva API
+    const result = await apiClient.get('semestres', 'docentes', { semestre_id: semestreId });
+    
+    if (result && result.success) {
       const listaDocentes = document.getElementById("listaDocentesSemestre");
       listaDocentes.innerHTML = "";
 
-      if (data.length === 0) {
+      if (result.data.length === 0) {
         showToast("No hay docentes asignados a este semestre", "warning");
         return;
       }
@@ -261,7 +257,7 @@ function mostrarModalSeleccionarDocentes(semestreId) {
         .setAttribute("data-semestre", semestreId);
 
       // Mostrar lista de docentes
-      data.forEach((docente) => {
+      result.data.forEach((docente) => {
         const label = document.createElement("label");
         label.className = "checkbox-item";
         label.innerHTML = `
@@ -275,11 +271,13 @@ function mostrarModalSeleccionarDocentes(semestreId) {
       document
         .getElementById("modalSeleccionarDocentes")
         .classList.add("active");
-    })
-    .catch((error) => {
-      console.error("Error:", error);
-      showToast("Error al cargar los docentes del semestre", "error");
-    });
+    } else {
+      showToast("Error al cargar docentes", "error");
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    showToast("Error al cargar los docentes del semestre", "error");
+  }
 }
 
 // Mostrar modal para seleccionar requisitos
@@ -297,7 +295,7 @@ function mostrarModalSeleccionarRequisitos() {
 }
 
 // Modificar la función generarReporteSemestreCompleto para asegurar que los estados seleccionados se pasen correctamente
-function generarReporteSemestreCompleto() {
+async function generarReporteSemestreCompleto() {
   showToast("Generando reporte de semestre...", "info");
 
   // Obtener datos seleccionados
@@ -330,35 +328,29 @@ function generarReporteSemestreCompleto() {
 
   console.log("Estados seleccionados:", estadosSeleccionados); // Para depuración
 
-  // Crear objeto con los parámetros
-  const params = new URLSearchParams();
-  params.append("ID_semestre", semestreId);
-  params.append("docentes", JSON.stringify(docentesSeleccionados));
-  params.append("estados", JSON.stringify(estadosSeleccionados));
+  try {
+    // Realizar petición usando la nueva API
+    const result = await apiClient.get('reportes', 'semestre', {
+      semestre_id: semestreId,
+      docentes: JSON.stringify(docentesSeleccionados),
+      estados: JSON.stringify(estadosSeleccionados)
+    });
 
-  // Realizar petición para generar reporte
-  fetch(
-    `${BASE_URL}php/reportes/generar_reporte_semestre.php?${params.toString()}`
-  )
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Error en la petición");
-      }
-      return response.json();
-    })
-    .then((data) => {
+    if (result && result.success) {
       // Añadir los estados seleccionados a los datos
-      data.estadosSeleccionados = estadosSeleccionados;
+      result.data.estadosSeleccionados = estadosSeleccionados;
 
       // Depuración: Imprimir los datos recibidos para verificar los estados
-      console.log("Datos recibidos del servidor:", data);
+      console.log("Datos recibidos del servidor:", result.data);
 
-      mostrarReporteSemestre(data);
-    })
-    .catch((error) => {
-      console.error("Error:", error);
+      mostrarReporteSemestre(result.data);
+    } else {
       showToast("Error al generar el reporte", "error");
-    });
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    showToast("Error al generar el reporte", "error");
+  }
 }
 
 // Modificar la función mostrarReporteSemestre para filtrar por estados seleccionados
@@ -425,17 +417,18 @@ function mostrarReporteSemestre(data) {
 
         // Celdas de estado de requisitos
         data.requisitos.forEach((requisito) => {
-          const key = `${docente.ID_docente}_${requisito.ID_requisitos}`;
+          // Acceder al estado desde la estructura que devuelve la API
+          const requisitoData = docente.requisitos[requisito.ID_requisitos];
 
           // Verificar si existe el estado para este docente y requisito
-          if (!data.estado[key]) {
+          if (!requisitoData) {
             // Si no existe, mostrar una celda vacía
             filasDocente += `<td class="estado-no-seleccionado">-</td>`;
             return; // Continuar con el siguiente requisito
           }
 
           // Obtener el estado exacto de la base de datos
-          const estadoExacto = data.estado[key].estado;
+          const estadoExacto = requisitoData.estado;
 
           // Verificar si este estado está entre los seleccionados
           if (!estadosSeleccionados.includes(estadoExacto)) {
@@ -467,8 +460,8 @@ function mostrarReporteSemestre(data) {
             <td class="${estadoClass}">
               ${estadoIcon} ${estadoExacto}
               ${
-                data.estado[key].comentario
-                  ? `<br><small>${data.estado[key].comentario}</small>`
+                requisitoData.comentario
+                  ? `<br><small>${requisitoData.comentario}</small>`
                   : ""
               }
             </td>
@@ -516,23 +509,21 @@ function mostrarReporteSemestre(data) {
 }
 
 // Función para generar reporte de docentes
-function generarReporteDocentes() {
+async function generarReporteDocentes() {
   showToast("Generando reporte de docentes...", "info");
 
-  fetch(`${BASE_URL}php/docentes/leer_docentes.php`)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Error en la petición");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      mostrarReporteDocentes(data);
-    })
-    .catch((error) => {
-      console.error("Error:", error);
-      showToast("Error al generar el reporte", "error");
-    });
+  try {
+    const result = await DocenteService.getAll();
+    
+    if (result && result.success) {
+      mostrarReporteDocentes(result.data.docentes || []);
+    } else {
+      showToast("Error al obtener los docentes", "error");
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    showToast("Error al generar el reporte", "error");
+  }
 }
 
 // Función para mostrar el reporte de docentes
@@ -607,23 +598,21 @@ function mostrarReporteDocentes(docentes) {
 }
 
 // Función para generar reporte de requisitos
-function generarReporteRequisitos() {
+async function generarReporteRequisitos() {
   showToast("Generando reporte de requisitos...", "info");
 
-  fetch(`${BASE_URL}php/requisitos/leer_requisitos.php`)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Error en la petición");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      mostrarReporteRequisitos(data);
-    })
-    .catch((error) => {
-      console.error("Error:", error);
-      showToast("Error al generar el reporte", "error");
-    });
+  try {
+    const result = await RequisitoService.getAll();
+    
+    if (result && result.success) {
+      mostrarReporteRequisitos(result.data);
+    } else {
+      showToast("Error al obtener los requisitos", "error");
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    showToast("Error al generar el reporte", "error");
+  }
 }
 
 // Función para mostrar el reporte de requisitos
@@ -659,8 +648,8 @@ function mostrarReporteRequisitos(requisitos) {
       requisitos.forEach((requisito) => {
         html += `
           <tr>
-            <td>${requisito.ID_requisitos}</td>
-            <td>${requisito.requisitoTipo}</td>
+            <td>${requisito.id}</td>
+            <td>${requisito.nombre}</td>
           </tr>
         `;
       });
@@ -690,24 +679,21 @@ function mostrarReporteRequisitos(requisitos) {
 }
 
 // Función para mostrar estadísticas
-function mostrarEstadisticas() {
+async function mostrarEstadisticas() {
   showToast("Generando estadísticas...", "info");
 
-  // Cargar datos reales desde el servidor
-  fetch(`${BASE_URL}php/reportes/estadisticas_generales.php`)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Error en la petición");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      mostrarEstadisticasGenerales(data);
-    })
-    .catch((error) => {
-      console.error("Error:", error);
-      showToast("Error al generar las estadísticas", "error");
-    });
+  try {
+    const result = await apiClient.get('reportes', 'estadisticas');
+    
+    if (result && result.success) {
+      mostrarEstadisticasGenerales(result.data);
+    } else {
+      showToast("Error al obtener estadísticas", "error");
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    showToast("Error al generar las estadísticas", "error");
+  }
 }
 
 // Función para mostrar estadísticas generales
@@ -1031,3 +1017,39 @@ function formatearFecha(fechaStr) {
   const fecha = new Date(fechaStr);
   return fecha.toLocaleDateString("es-MX");
 }
+
+// Verificar autenticación
+async function checkAuthentication() {
+  try {
+    const result = await AuthService.checkSession();
+    if (!result || !result.success || !result.data.valid) {
+      window.location.href = '../index.html';
+      return;
+    }
+  } catch (error) {
+    console.error('Error verificando sesión:', error);
+    window.location.href = '../index.html';
+  }
+}
+
+// Logout
+async function logout() {
+  try {
+    await AuthService.logout();
+    window.location.href = '../index.html';
+  } catch (error) {
+    console.error('Error en logout:', error);
+    window.location.href = '../index.html';
+  }
+}
+
+// Configurar eventos de logout
+document.addEventListener("DOMContentLoaded", () => {
+  const logoutLinks = document.querySelectorAll('a[href="../index.html"]');
+  logoutLinks.forEach(link => {
+    link.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await logout();
+    });
+  });
+});

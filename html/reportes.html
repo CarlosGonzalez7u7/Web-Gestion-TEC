@@ -43,7 +43,7 @@
                 <header class="top-header">
                     <div class="header-title">
                         <h1>Reportes del Sistema</h1>
-                        <p>Visualiza y genera reportes de bitácoras y
+                        <p>Visualiza y genera reportes de semestres y
                             docentes</p>
                     </div>
                     <div class="user-profile">
@@ -271,9 +271,11 @@
 
         <div id="toast-container"></div>
 
-        <!-- Primero cargar print-utils.js -->
+        <!-- Primero cargar API client -->
+        <script src="../js/api-client.js"></script>
+        <!-- Luego print-utils.js -->
         <script src="../js/print-utils.js"></script>
-        <!-- Luego cargar reportes.js -->
+        <!-- Finalmente reportes.js -->
         <script src="../js/reportes.js"></script>
     </body>
 </html>

@@ -1,70 +1,69 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // Función para mostrar notificaciones toast
-  function showToast(message, type = "info") {
-    const toastContainer = document.getElementById("toast-container");
-    const toast = document.createElement("div");
-    toast.className = `toast toast-${type}`;
-
-    let icon = "info-circle";
-    if (type === "success") icon = "check-circle";
-    if (type === "warning") icon = "exclamation-triangle";
-    if (type === "error") icon = "times-circle";
-
-    toast.innerHTML = `<i class="fas fa-${icon}"></i> ${message}`;
-    toastContainer.appendChild(toast);
-
-    // Eliminar el toast después de 3 segundos
-    setTimeout(() => {
-      toast.remove();
-    }, 3000);
-  }
+  // Verificar si ya hay una sesión activa
+  checkExistingSession();
 
   // Manejar el envío del formulario de login
-  document.getElementById("loginForm").addEventListener("submit", function (e) {
+  document.getElementById("loginForm").addEventListener("submit", async function (e) {
     e.preventDefault();
 
-    const formData = new FormData(this);
+    const usernameOrEmail = this.usernameOrEmail.value.trim();
+    const password = this.password.value;
     const errorMessage = document.getElementById("errorMessage");
+    
+    // Limpiar errores previos
     errorMessage.textContent = "";
+
+    // Validación básica
+    if (!usernameOrEmail || !password) {
+      errorMessage.textContent = "Por favor, completa todos los campos";
+      return;
+    }
 
     // Mostrar indicador de carga
     const submitButton = this.querySelector('button[type="submit"]');
     const originalText = submitButton.innerHTML;
-    submitButton.innerHTML =
-      '<i class="fas fa-spinner fa-spin"></i> Verificando...';
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...';
     submitButton.disabled = true;
 
-    fetch("php/login.php", {
-      method: "POST",
-      body: formData,
-    })
-      .then((response) => {
-        if (!response.ok) throw new Error("Error de red");
-        return response.json();
-      })
-      .then((data) => {
-        // Restaurar el botón
-        submitButton.innerHTML = originalText;
-        submitButton.disabled = false;
+    try {
+      console.log('Intentando login con:', usernameOrEmail, password);
+      
+      // Llamar a la API de login
+      const result = await AuthService.login(usernameOrEmail, password);
+      
+      console.log('Resultado del login:', result);
 
-        if (data.success) {
-          showToast("Inicio de sesión exitoso", "success");
-          // Pequeña demora para mostrar el toast antes de redirigir
-          setTimeout(() => {
-            window.location.href = "html/bitacora.html";
-          }, 1000);
-        } else {
-          errorMessage.textContent = data.message || "Credenciales incorrectas";
-          showToast("Error de autenticación", "error");
-        }
-      })
-      .catch((error) => {
-        // Restaurar el botón
-        submitButton.innerHTML = originalText;
-        submitButton.disabled = false;
-
-        errorMessage.textContent = "Error en la conexión. Intente nuevamente.";
-        showToast("Error de conexión", "error");
-      });
+      if (result && result.success) {
+        errorMessage.textContent = "";
+        errorMessage.style.color = "green";
+        errorMessage.textContent = "Inicio de sesión exitoso. Redirigiendo...";
+        
+        // Redirigir inmediatamente
+        window.location.href = "html/bitacora.html";
+      } else {
+        const message = result?.message || "Credenciales incorrectas";
+        errorMessage.textContent = message;
+      }
+    } catch (error) {
+      console.error("Error en login:", error);
+      errorMessage.textContent = "Error en la conexión. Intente nuevamente.";
+    } finally {
+      // Restaurar botón
+      submitButton.innerHTML = originalText;
+      submitButton.disabled = false;
+    }
   });
+
+  // Verificar sesión existente
+  async function checkExistingSession() {
+    try {
+      const result = await AuthService.checkSession();
+      if (result && result.success && result.data.valid) {
+        // Ya hay una sesión activa, redirigir
+        window.location.href = "html/bitacora.html";
+      }
+    } catch (error) {
+      console.log("No hay sesión activa");
+    }
+  }
 });
