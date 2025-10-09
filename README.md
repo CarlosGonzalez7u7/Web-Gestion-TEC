@@ -1,6 +1,31 @@
-# Web-Gestion-TEC
+# Web-Gestion-TEC - Sistema de Gestión Académica
 
-## 📋 Requisitos del Sistema
+## Arquitectura MVC
+
+Este proyecto utiliza una arquitectura MVC (Model-View-Controller) con PHP puro y una API REST.
+
+### Estructura del Proyecto
+
+```
+Web-Gestion-TEC/
+├── app/                          # Lógica de aplicación
+│   ├── controllers/              # Controladores de la API
+│   ├── models/                   # Modelos de datos
+│   ├── views/                    # Vistas HTML
+│   └── middleware/               # Middleware de autenticación
+├── config/                       # Archivos de configuración
+│   └── Database.php              # Configuración de base de datos
+├── public/                       # Punto de entrada público
+│   ├── index.php                 # API REST unificada
+│   ├── assets/                   # Recursos estáticos
+│   │   ├── css/                  # Hojas de estilo
+│   │   └── js/                   # Scripts JavaScript
+│   └── .htaccess                 # Configuración Apache
+├── .htaccess                     # Redirección a public/
+└── README.md                     # Este archivo
+```
+
+## Requisitos del Sistema
 
 Antes de comenzar, asegúrate de tener instalado lo siguiente en tu sistema:
 
@@ -8,7 +33,7 @@ Antes de comenzar, asegúrate de tener instalado lo siguiente en tu sistema:
 - Visual Studio Code
 - Git
 
-## 🚀 Guía de Instalación
+## Guía de Instalación
 
 ### 1. Instalar XAMPP
 
@@ -56,11 +81,11 @@ Abre una terminal o símbolo del sistema y ejecuta:
 git --version
 \`\`\`
 
-## 📁 Configuración del Proyecto
+## Configuración del Proyecto
 
 ### 1. Crear la carpeta del proyecto
 
-**⚠️ IMPORTANTE:** El proyecto debe clonarse en la siguiente ruta específica:
+** IMPORTANTE:** El proyecto debe clonarse en la siguiente ruta específica:
 
 \`\`\`
 C:\xampp\htdocs\NahimWeb
@@ -102,7 +127,7 @@ git clone https://github.com/CarlosGonzalez7u7/Web-Gestion-TEC.git .
 2. Inicia los servicios de **Apache** y **MySQL**
 3. Verifica que ambos servicios estén corriendo (aparecerán en verde)
 
-## 🌐 Acceder al Proyecto
+## Acceder al Proyecto
 
 Una vez que hayas clonado el proyecto y XAMPP esté corriendo:
 
@@ -110,13 +135,13 @@ Una vez que hayas clonado el proyecto y XAMPP esté corriendo:
 2. Ve a: `http://localhost/NahimWeb`
 3. Deberías ver tu proyecto funcionando
 
-## 📝 Notas Importantes
+## Notas Importantes
 
 - **Ruta obligatoria:** El proyecto DEBE estar en `C:\xampp\htdocs\NahimWeb`
 - Asegúrate de que Apache y MySQL estén corriendo en XAMPP antes de acceder al proyecto
 - Si encuentras problemas, verifica que los puertos 80 (Apache) y 3306 (MySQL) no estén siendo usados por otros programas
 
-## 🤝 Contribuir
+## Contribuir
 
 1. Haz un fork del proyecto
 2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
@@ -124,7 +149,7 @@ Una vez que hayas clonado el proyecto y XAMPP esté corriendo:
 4. Push a la rama (`git push origin feature/AmazingFeature`)
 5. Abre un Pull Request
 
-## 📞 Soporte
+## Soporte
 
 Si tienes problemas con la instalación o configuración, por favor:
 

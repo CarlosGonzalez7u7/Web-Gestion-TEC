@@ -1,6 +1,6 @@
 // Configuración global de la API
 const API_CONFIG = {
-    BASE_URL: '/Web-Gestion-TEC/api/v1/simple.php',
+    BASE_URL: '/Web-Gestion-TEC/public/index.php',
     ENDPOINTS: {
         AUTH: {
             LOGIN: '/auth/login',
@@ -98,12 +98,7 @@ class APIClient {
             
             if (!result.success && response.status === 401) {
                 // Redireccionar al login si no está autenticado
-                const currentPath = window.location.pathname;
-                if (currentPath.includes('/html/')) {
-                    window.location.href = '../index.html';
-                } else {
-                    window.location.href = 'index.html';
-                }
+                window.location.href = 'index.html';
                 return null;
             }
             

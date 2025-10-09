@@ -39,7 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
         errorMessage.textContent = "Inicio de sesión exitoso. Redirigiendo...";
         
         // Redirigir inmediatamente
-        window.location.href = "html/bitacora.html";
+        window.location.href = "bitacora.html";
       } else {
         const message = result?.message || "Credenciales incorrectas";
         errorMessage.textContent = message;
@@ -60,7 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const result = await AuthService.checkSession();
       if (result && result.success && result.data.valid) {
         // Ya hay una sesión activa, redirigir
-        window.location.href = "html/bitacora.html";
+        window.location.href = "bitacora.html";
       }
     } catch (error) {
       console.log("No hay sesión activa");

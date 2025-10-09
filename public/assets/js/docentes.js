@@ -11,6 +11,10 @@ let currentPage = 1;
 let currentLimit = 10;
 let currentSearchTerm = '';
 
+// Timers para debounce
+let searchDocentesTimer = null;
+let searchRequisitosTimer = null;
+
 document.addEventListener("DOMContentLoaded", async () => {
   // Verificar autenticación
   await checkAuthentication();
@@ -103,35 +107,85 @@ function configurarEventos() {
   }
 
   // Búsqueda de docentes
-  const btnBuscarDocentes = document.querySelector('#docentes-section .btn-secondary');
+  const btnBuscarDocentes = document.getElementById("btnBuscarDocentes");
   if (btnBuscarDocentes) {
     btnBuscarDocentes.addEventListener("click", buscarDocentes);
   }
 
-  // Enter en campo de búsqueda
+  // Búsqueda en tiempo real para docentes
   const busquedaInput = document.getElementById("busqueda");
   if (busquedaInput) {
+    console.log("✅ Campo de búsqueda de docentes encontrado");
+    
+    busquedaInput.addEventListener("input", (e) => {
+      console.log("🔍 Evento input detectado:", e.target.value);
+      
+      // Cancelar el timer anterior si existe
+      if (searchDocentesTimer) {
+        clearTimeout(searchDocentesTimer);
+      }
+      
+      // Crear un nuevo timer que ejecutará la búsqueda después de 500ms
+      searchDocentesTimer = setTimeout(() => {
+        console.log("⏰ Ejecutando búsqueda automática");
+        buscarDocentes();
+      }, 500);
+    });
+    
+    // También mantener el evento Enter para búsqueda inmediata
     busquedaInput.addEventListener("keypress", (e) => {
       if (e.key === 'Enter') {
+        console.log("⚡ Enter presionado - búsqueda inmediata");
+        // Cancelar el timer si existe
+        if (searchDocentesTimer) {
+          clearTimeout(searchDocentesTimer);
+        }
         buscarDocentes();
       }
     });
+  } else {
+    console.error("❌ Campo de búsqueda de docentes NO encontrado");
   }
 
   // Búsqueda de requisitos
-  const btnBuscarRequisitos = document.querySelector('#requisitos-section .btn-secondary');
+  const btnBuscarRequisitos = document.getElementById("btnBuscarRequisitos");
   if (btnBuscarRequisitos) {
     btnBuscarRequisitos.addEventListener("click", buscarRequisitos);
   }
 
-  // Enter en campo de búsqueda de requisitos
+  // Búsqueda en tiempo real para requisitos
   const busquedaRequisitoInput = document.getElementById("busquedaRequisito");
   if (busquedaRequisitoInput) {
+    console.log("✅ Campo de búsqueda de requisitos encontrado");
+    
+    busquedaRequisitoInput.addEventListener("input", (e) => {
+      console.log("🔍 Evento input detectado en requisitos:", e.target.value);
+      
+      // Cancelar el timer anterior si existe
+      if (searchRequisitosTimer) {
+        clearTimeout(searchRequisitosTimer);
+      }
+      
+      // Crear un nuevo timer que ejecutará la búsqueda después de 500ms
+      searchRequisitosTimer = setTimeout(() => {
+        console.log("⏰ Ejecutando búsqueda automática de requisitos");
+        buscarRequisitos();
+      }, 500);
+    });
+    
+    // También mantener el evento Enter para búsqueda inmediata
     busquedaRequisitoInput.addEventListener("keypress", (e) => {
       if (e.key === 'Enter') {
+        console.log("⚡ Enter presionado - búsqueda inmediata de requisitos");
+        // Cancelar el timer si existe
+        if (searchRequisitosTimer) {
+          clearTimeout(searchRequisitosTimer);
+        }
         buscarRequisitos();
       }
     });
+  } else {
+    console.error("❌ Campo de búsqueda de requisitos NO encontrado");
   }
 
   // Logout
@@ -225,11 +279,22 @@ async function buscarDocentes() {
   currentSearchTerm = termino;
   currentPage = 1; // Resetear página al buscar
   
+  // Mostrar indicador de búsqueda
+  const searchContainer = document.querySelector('#docentes-section .search-container');
+  if (searchContainer) {
+    searchContainer.classList.add('searching');
+  }
+  
   try {
     await cargarDocentes(termino);
   } catch (error) {
     console.error("Error en búsqueda:", error);
     UIHelpers.showToast("Error al buscar docentes", "error");
+  } finally {
+    // Quitar indicador de búsqueda
+    if (searchContainer) {
+      searchContainer.classList.remove('searching');
+    }
   }
 }
 
@@ -381,11 +446,22 @@ function actualizarTablaRequisitos(requisitos) {
 async function buscarRequisitos() {
   const termino = document.getElementById("busquedaRequisito")?.value?.trim() || '';
   
+  // Mostrar indicador de búsqueda
+  const searchContainer = document.querySelector('#requisitos-section .search-container');
+  if (searchContainer) {
+    searchContainer.classList.add('searching');
+  }
+  
   try {
     await cargarRequisitos(termino);
   } catch (error) {
     console.error("Error en búsqueda:", error);
     UIHelpers.showToast("Error al buscar requisitos", "error");
+  } finally {
+    // Quitar indicador de búsqueda
+    if (searchContainer) {
+      searchContainer.classList.remove('searching');
+    }
   }
 }
 

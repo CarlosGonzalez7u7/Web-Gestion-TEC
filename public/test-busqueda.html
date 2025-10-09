@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Búsqueda en Tiempo Real</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #3498db;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .result {
+            padding: 10px;
+            background: #f0f0f0;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+        .log {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            font-family: monospace;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test de Búsqueda en Tiempo Real</h1>
+    
+    <h2>Campo de Búsqueda:</h2>
+    <input type="text" id="testSearch" class="search-box" placeholder="Escribe algo aquí...">
+    
+    <h2>Logs de Eventos:</h2>
+    <div class="log" id="logContainer"></div>
+    
+    <h2>Resultados:</h2>
+    <div id="results"></div>
+
+    <script>
+        let timer = null;
+        let searchCount = 0;
+        
+        function addLog(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            
+            let color = '#0f0';
+            if (type === 'error') color = '#f00';
+            if (type === 'warning') color = '#ff0';
+            if (type === 'success') color = '#0ff';
+            
+            logEntry.innerHTML = `<span style="color: ${color}">[${timestamp}] ${message}</span>`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        function simulateSearch(value) {
+            searchCount++;
+            addLog(`🔍 Búsqueda #${searchCount} ejecutada con: "${value}"`, 'success');
+            
+            const results = document.getElementById('results');
+            results.innerHTML = `
+                <div class="result">
+                    <strong>Búsqueda ejecutada:</strong> "${value}"<br>
+                    <strong>Número de búsqueda:</strong> ${searchCount}<br>
+                    <strong>Longitud:</strong> ${value.length} caracteres
+                </div>
+            `;
+        }
+        
+        const searchInput = document.getElementById('testSearch');
+        
+        if (searchInput) {
+            addLog('✅ Campo de búsqueda encontrado', 'success');
+            
+            // Evento INPUT (se dispara mientras escribes)
+            searchInput.addEventListener('input', (e) => {
+                const value = e.target.value;
+                addLog(`📝 Evento INPUT detectado: "${value}"`, 'info');
+                
+                // Cancelar búsqueda anterior
+                if (timer) {
+                    clearTimeout(timer);
+                    addLog('⏸️ Timer anterior cancelado', 'warning');
+                }
+                
+                // Crear nuevo timer
+                addLog('⏰ Iniciando timer de 500ms...', 'info');
+                timer = setTimeout(() => {
+                    addLog('⏱️ Timer completado - ejecutando búsqueda', 'success');
+                    simulateSearch(value);
+                }, 500);
+            });
+            
+            // Evento KEYPRESS (Enter)
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    addLog('⚡ ENTER presionado - búsqueda inmediata', 'success');
+                    
+                    if (timer) {
+                        clearTimeout(timer);
+                        addLog('⏸️ Timer cancelado por Enter', 'warning');
+                    }
+                    
+                    simulateSearch(e.target.value);
+                }
+            });
+            
+            addLog('🎯 Eventos configurados correctamente', 'success');
+            addLog('💡 Instrucciones:', 'info');
+            addLog('   - Escribe algo y espera 500ms para búsqueda automática', 'info');
+            addLog('   - Presiona Enter para búsqueda inmediata', 'info');
+            
+        } else {
+            addLog('❌ ERROR: Campo de búsqueda NO encontrado', 'error');
+        }
+    </script>
+</body>
+</html>

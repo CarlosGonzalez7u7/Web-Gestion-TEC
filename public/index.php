@@ -26,7 +26,7 @@ set_exception_handler(function($exception) {
 });
 
 // Incluir configuración de base de datos
-require_once __DIR__ . '/config/Database.php';
+require_once __DIR__ . '/../config/Database.php';
 
 // Función simple de respuesta
 function sendResponse($success, $data = null, $message = '', $code = 200) {
@@ -139,16 +139,29 @@ elseif ($endpoint === 'docentes') {
             $limit = (int)($_GET['limit'] ?? 10);
             $offset = ($page - 1) * $limit;
             
-            $whereClause = '';
             if (!empty($search)) {
-                $whereClause = "WHERE nombre LIKE '%$search%' OR AP_Paterno LIKE '%$search%' OR AP_Materno LIKE '%$search%' OR carrera LIKE '%$search%'";
+                $searchParam = "%$search%";
+                $stmt = $conn->prepare("SELECT * FROM docentes WHERE nombre LIKE ? OR AP_Paterno LIKE ? OR AP_Materno LIKE ? OR carrera LIKE ? ORDER BY nombre LIMIT ? OFFSET ?");
+                $stmt->bind_param("ssssii", $searchParam, $searchParam, $searchParam, $searchParam, $limit, $offset);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $docentes = $result->fetch_all(MYSQLI_ASSOC);
+                
+                $countStmt = $conn->prepare("SELECT COUNT(*) as total FROM docentes WHERE nombre LIKE ? OR AP_Paterno LIKE ? OR AP_Materno LIKE ? OR carrera LIKE ?");
+                $countStmt->bind_param("ssss", $searchParam, $searchParam, $searchParam, $searchParam);
+                $countStmt->execute();
+                $countResult = $countStmt->get_result();
+                $total = $countResult->fetch_assoc()['total'];
+            } else {
+                $stmt = $conn->prepare("SELECT * FROM docentes ORDER BY nombre LIMIT ? OFFSET ?");
+                $stmt->bind_param("ii", $limit, $offset);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $docentes = $result->fetch_all(MYSQLI_ASSOC);
+                
+                $countStmt = $conn->query("SELECT COUNT(*) as total FROM docentes");
+                $total = $countStmt->fetch_assoc()['total'];
             }
-            
-            $stmt = $conn->query("SELECT * FROM docentes $whereClause ORDER BY nombre LIMIT $limit OFFSET $offset");
-            $docentes = $stmt->fetch_all(MYSQLI_ASSOC);
-            
-            $countStmt = $conn->query("SELECT COUNT(*) as total FROM docentes $whereClause");
-            $total = $countStmt->fetch_assoc()['total'];
             
             sendResponse(true, [
                 'docentes' => $docentes,
@@ -274,22 +287,23 @@ elseif ($endpoint === 'docentes') {
                 sendResponse(false, null, 'Docente no encontrado', 404);
             }
             
-            // Verificar si el docente está siendo usado en bitacora_semestre
-            $usageStmt = $conn->prepare("SELECT COUNT(*) as count FROM bitacora_semestre WHERE ID_docente = ?");
-            $usageStmt->bind_param("i", $id);
-            $usageStmt->execute();
-            $usageResult = $usageStmt->get_result()->fetch_assoc();
+            // PRIMERO: Eliminar todos los registros de bitácora asociados al docente
+            $deleteBitacoraStmt = $conn->prepare("DELETE FROM bitacora_semestre WHERE ID_docente = ?");
+            $deleteBitacoraStmt->bind_param("i", $id);
+            $deleteBitacoraStmt->execute();
+            $registrosEliminados = $deleteBitacoraStmt->affected_rows;
             
-            if ($usageResult['count'] > 0) {
-                sendResponse(false, null, 'No se puede eliminar el docente porque tiene registros asociados en la bitácora de semestres', 400);
-            }
-            
+            // SEGUNDO: Eliminar el docente
             $stmt = $conn->prepare("DELETE FROM docentes WHERE ID_docente = ?");
             $stmt->bind_param("i", $id);
             
             if ($stmt->execute()) {
                 if ($stmt->affected_rows > 0) {
-                    sendResponse(true, null, 'Docente eliminado exitosamente');
+                    $mensaje = "Docente eliminado exitosamente";
+                    if ($registrosEliminados > 0) {
+                        $mensaje .= " (se eliminaron $registrosEliminados registros de bitácora asociados)";
+                    }
+                    sendResponse(true, ['registros_bitacora_eliminados' => $registrosEliminados], $mensaje);
                 } else {
                     sendResponse(false, null, 'No se pudo eliminar el docente', 500);
                 }
@@ -317,9 +331,20 @@ elseif ($endpoint === 'requisitos') {
         $conn = $db->getConnection();
         
         if ($action === 'list' && $_SERVER['REQUEST_METHOD'] === 'GET') {
-            $stmt = $conn->prepare("SELECT ID_requisitos as id, requisitoTipo as nombre FROM requisitos ORDER BY requisitoTipo");
-            $stmt->execute();
-            $result = $stmt->get_result();
+            $search = $_GET['search'] ?? '';
+            
+            if (!empty($search)) {
+                $searchParam = "%$search%";
+                $stmt = $conn->prepare("SELECT ID_requisitos as id, requisitoTipo as nombre FROM requisitos WHERE requisitoTipo LIKE ? ORDER BY requisitoTipo");
+                $stmt->bind_param("s", $searchParam);
+                $stmt->execute();
+                $result = $stmt->get_result();
+            } else {
+                $stmt = $conn->prepare("SELECT ID_requisitos as id, requisitoTipo as nombre FROM requisitos ORDER BY requisitoTipo");
+                $stmt->execute();
+                $result = $stmt->get_result();
+            }
+            
             $requisitos = [];
             while ($row = $result->fetch_assoc()) {
                 $requisitos[] = $row;
@@ -421,22 +446,23 @@ elseif ($endpoint === 'requisitos') {
                 sendResponse(false, null, 'Requisito no encontrado', 404);
             }
             
-            // Verificar si el requisito está siendo usado en bitacora_semestre
-            $usageStmt = $conn->prepare("SELECT COUNT(*) as count FROM bitacora_semestre WHERE ID_requisito = ?");
-            $usageStmt->bind_param("i", $id);
-            $usageStmt->execute();
-            $usageResult = $usageStmt->get_result()->fetch_assoc();
+            // PRIMERO: Eliminar todos los registros de bitácora asociados al requisito
+            $deleteBitacoraStmt = $conn->prepare("DELETE FROM bitacora_semestre WHERE ID_requisito = ?");
+            $deleteBitacoraStmt->bind_param("i", $id);
+            $deleteBitacoraStmt->execute();
+            $registrosEliminados = $deleteBitacoraStmt->affected_rows;
             
-            if ($usageResult['count'] > 0) {
-                sendResponse(false, null, 'No se puede eliminar el requisito porque tiene registros asociados en la bitácora de semestres', 400);
-            }
-            
+            // SEGUNDO: Eliminar el requisito
             $stmt = $conn->prepare("DELETE FROM requisitos WHERE ID_requisitos = ?");
             $stmt->bind_param("i", $id);
             
             if ($stmt->execute()) {
                 if ($stmt->affected_rows > 0) {
-                    sendResponse(true, null, 'Requisito eliminado exitosamente');
+                    $mensaje = "Requisito eliminado exitosamente";
+                    if ($registrosEliminados > 0) {
+                        $mensaje .= " (se eliminaron $registrosEliminados registros de bitácora asociados)";
+                    }
+                    sendResponse(true, ['registros_bitacora_eliminados' => $registrosEliminados], $mensaje);
                 } else {
                     sendResponse(false, null, 'No se pudo eliminar el requisito', 500);
                 }

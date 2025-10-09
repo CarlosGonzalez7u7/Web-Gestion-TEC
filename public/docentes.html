@@ -4,8 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Sistema Académico - Gestión de Docentes y Requisitos</title>
-    <link rel="stylesheet" href="../css/docentes.css">
+    <link rel="stylesheet" href="assets/css/docentes.css?v=3.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 
@@ -26,7 +29,7 @@
                         <span>Requisitos</span></a></li>
                 <li><a href="reportes.html"><i class="fas fa-chart-bar"></i>
                         <span>Reportes</span></a></li>
-                <li class="logout"><a href="../index.html"><i class="fas fa-sign-out-alt"></i> <span>Cerrar
+                <li class="logout"><a href="index.html"><i class="fas fa-sign-out-alt"></i> <span>Cerrar
                             Sesión</span></a></li>
             </ul>
         </nav>
@@ -60,7 +63,7 @@
                         <div class="search-container">
                             <i class="fas fa-search"></i>
                             <input type="text" id="busqueda" placeholder="Buscar por nombre o apellidos..." />
-                            <button onclick="buscarDocentes()" class="btn btn-secondary">Buscar</button>
+                            <button id="btnBuscarDocentes" class="btn btn-secondary">Buscar</button>
                         </div>
 
                         <div class="table-responsive">
@@ -97,7 +100,7 @@
                         <div class="search-container">
                             <i class="fas fa-search"></i>
                             <input type="text" id="busquedaRequisito" placeholder="Buscar requisito..." />
-                            <button onclick="buscarRequisitos()" class="btn btn-secondary">Buscar</button>
+                            <button id="btnBuscarRequisitos" class="btn btn-secondary">Buscar</button>
                         </div>
 
                         <div class="table-responsive">
@@ -208,8 +211,8 @@
     </div>
 
 
-    <script src="../js/api-client.js"></script>
-    <script src="../js/docentes.js"></script>
+    <script src="assets/js/api-client.js?v=3.0"></script>
+    <script src="assets/js/docentes.js?v=3.0"></script>
 </body>
 
 </html>
