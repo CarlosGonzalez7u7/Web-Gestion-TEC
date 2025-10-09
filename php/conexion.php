@@ -2,7 +2,7 @@
 
 $server = "localhost";//localhost
 $user = "root";//tecuruap_iscsadbd
-$pass = "";//3scs1dbd91
+$pass = "12345678";//3scs1dbd91
 $db   = 'webnahim';//tecuruap_iscsad
 $conexion = new mysqli($server, $user, $pass, $db);
 
