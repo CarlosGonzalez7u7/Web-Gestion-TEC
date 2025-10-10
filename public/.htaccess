@@ -1,0 +1,23 @@
+# Permitir CORS
+Header set Access-Control-Allow-Origin "http://localhost"
+Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+Header set Access-Control-Allow-Headers "Content-Type, Authorization"
+Header set Access-Control-Allow-Credentials "true"
+
+# Directorio índice - Login como página principal
+DirectoryIndex index.html index.php
+
+# PHP settings
+php_flag display_errors Off
+php_value error_reporting 0
+
+# Habilitar reescritura de URLs
+RewriteEngine On
+
+# Si el archivo existe, servirlo directamente
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# Si el directorio existe, servirlo directamente
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
