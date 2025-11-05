@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistema Académico - Bitácora por Semestre</title>
+    <link rel="stylesheet" href="assets/css/bitacora.css" />
+    <style>
+  /* Estilos para el botón Editar Semestre en la lista de semestres */
+  .semestre-actions > button.btn-editar {
+    background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 8px 16px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    box-shadow: 0 2px 4px rgba(74,144,226,0.2) !important;
+    margin-right: 0.5rem !important;
+  }
+  .semestre-actions > button.btn-editar:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 8px rgba(74,144,226,0.3) !important;
+  }
+  .semestre-actions > button.btn-editar i {
+    font-size: 13px !important;
+  }
+</style>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+
+<body>
+    <div class="app-container">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-university"></i>
+                <h2>Sistema Académico</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li class="active"><a href="bitacora.html"><i class="fas fa-calendar-alt"></i>
+                        <span>Semestres</span></a></li>
+                <li><a href="docentes.html"><i class="fas fa-user-tie"></i>
+                        <span>Docentes</span></a></li>
+                <li><a href="docentes.html#requisitos-section"><i class="fas fa-clipboard-list"></i>
+                        <span>Requisitos</span></a></li>
+                <li><a href="reportes.html"><i class="fas fa-chart-bar"></i>
+                        <span>Reportes</span></a></li>
+                <li class="logout"><a href="index.html"><i class="fas fa-sign-out-alt"></i> <span>Cerrar
+                            Sesión</span></a></li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <header class="top-header">
+                <div class="header-title">
+                    <h1>Gestión de Semestres</h1>
+                    <p>Administra los periodos académicos y sus
+                        requisitos</p>
+                </div>
+                <div class="user-profile">
+                    <span>Administrador</span>
+                    <div class="avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <button id="btnNuevoSemestre" class="btn btn-primary floating-btn">
+                    <i class="fas fa-plus"></i> 
+                </button>
+
+                <div id="semestreFormOverlay" class="overlay" style="display:none;">
+                    <div class="overlay-content">
+                        <div class="overlay-header">
+                            <h2><i class="fas fa-plus-circle"></i> Crear
+                                Nuevo Semestre</h2>
+                            <button class="btn-close" id="btnCerrarFormSemestre">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="overlay-body">
+                            <form id="formSemestre">
+                                <div class="form-group">
+                                    <label for="nomSem">Nombre del
+                                        Semestre</label>
+                                    <input type="text" id="nomSem" name="nomSem" placeholder="Ej: Enero-Junio 2025"
+                                        required />
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="fecha_inicio">Fecha de
+                                            Inicio</label>
+                                        <input type="date" id="fecha_inicio" name="fecha_inicio" required />
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="fecha_fin">Fecha de
+                                            Fin</label>
+                                        <input type="date" id="fecha_fin" name="fecha_fin" required />
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Crear
+                                    Semestre
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <section class="card" id="semestresList">
+                    <div class="card-header">
+                        <h2><i class="fas fa-list"></i> Semestres
+                            Disponibles</h2>
+                        <div class="search-container">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="busquedaSemestre" placeholder="Buscar semestre..." />
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="semestres-container">
+                            <ul id="listaSemestres" class="semestres-list"></ul>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="card" id="configuracionSemestre" style="display:none;">
+                    <div class="card-header">
+                        <h2><i class="fas fa-cog"></i> Configurar Semestre:
+                            <span id="nombreSemestre"></span>
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        <!-- en la sección de configuración -->
+                        <div class="config-section">
+                            <h3><i class="fas fa-user-tie"></i> Seleccionar Docentes</h3>
+                            <div class="select-all-master">
+                                <label><input type="checkbox" id="masterDocentes" /> Seleccionar todos</label>
+                            </div>
+                            <div id="checkDocentes" class="checkbox-list"></div>
+                        </div>
+
+                        <div class="config-section">
+                            <h3><i class="fas fa-clipboard-list"></i> Seleccionar Requisitos</h3>
+                            <div class="select-all-master">
+                                <label><input type="checkbox" id="masterRequisitos" /> Seleccionar todos</label>
+                            </div>
+                            <div id="checkRequisitos" class="checkbox-list"></div>
+                        </div>
+
+
+
+                        <button onclick="guardarConfiguracion()" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Guardar
+                            Configuración
+                        </button>
+                    </div>
+                </section>
+
+                <section class="card" id="tablaBitacora" style="display: none;">
+                    <div class="card-header">
+                        <div class="header-with-search">
+                            <h2><i class="fas fa-table"></i> Bitácora del
+                                Semestre: <span id="nombreSemestreTabla"></span></h2>
+                            <div class="search-container">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="busquedaDocente" placeholder="Buscar docente..." />
+                            </div>
+                        </div>
+                        <div class="bitacora-actions">
+                            <button id="btnEditarDocentes" class="btn btn-primary">
+                                <i class="fas fa-user-edit"></i> Editar
+                                Docentes
+                            </button>
+                            <button id="btnEditarRequisitos" class="btn btn-secondary">
+                                <i class="fas fa-clipboard-list"></i> Editar Requisitos
+                            </button>
+
+                            <button id="btnEliminarSemestre" class="btn btn-danger">
+                                <i class="fas fa-trash-alt"></i> Eliminar
+                                Semestre
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="contenedorBitacora" class="table-responsive"></div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal para editar docentes del semestre -->
+    <div id="editarDocentesModal" class="overlay" style="display:none;">
+        <div class="overlay-content">
+            <div class="overlay-header">
+                <h2><i class="fas fa-user-edit"></i> Editar Docentes del
+                    Semestre</h2>
+                <button class="btn-close" id="btnCerrarEditarDocentes">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="overlay-body">
+                <div class="docentes-actuales">
+                    <h3>Docentes Actuales</h3>
+                    <div id="listaDocentesActuales" class="checkbox-list"></div>
+                </div>
+                <div class="docentes-disponibles">
+                    <h3>Docentes Disponibles</h3>
+                    <div id="listaDocentesDisponibles" class="checkbox-list"></div>
+                </div>
+                <div class="form-actions">
+                    <button onclick="guardarEdicionDocentes()" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para editar requisitos del semestre -->
+    <div id="editarRequisitosModal" class="overlay" style="display:none;">
+        <div class="overlay-content">
+            <div class="overlay-header">
+                <h2><i class="fas fa-clipboard-list"></i> Editar Requisitos del Semestre</h2>
+                <button class="btn-close" id="btnCerrarEditarRequisitos">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="overlay-body">
+                <div class="requisitos-actuales">
+                    <h3>Requisitos Actuales</h3>
+                    <div id="listaRequisitosActuales" class="checkbox-list"></div>
+                </div>
+                <div class="requisitos-disponibles">
+                    <h3>Requisitos Disponibles</h3>
+                    <div id="listaRequisitosDisponibles" class="checkbox-list"></div>
+                </div>
+                <div class="form-actions">
+                    <button onclick="guardarEdicionRequisitos()" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para editar nombre de semestre -->
+    <div id="editarSemestreModal" class="overlay" style="display:none;">
+        <div class="overlay-content">
+            <div class="overlay-header">
+                <h2><i class="fas fa-edit"></i> Editar Semestre</h2>
+                <button class="btn-close" id="btnCerrarEditarSemestre">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="overlay-body">
+                <form id="formEditarSemestre">
+                    <div class="form-group">
+                        <label for="editNomSem">Nombre del Semestre</label>
+                        <input type="text" id="editNomSem" name="nomSem" required />
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Modal de confirmación para eliminar semestre -->
+    <div id="confirmarEliminarModal" class="overlay" style="display:none;">
+        <div class="overlay-content" style="max-width: 450px;">
+            <div class="overlay-header">
+                <h2><i class="fas fa-exclamation-triangle"></i> Confirmar
+                    Eliminación</h2>
+                <button class="btn-close" id="btnCerrarConfirmarEliminar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="overlay-body">
+                <p>¿Estás seguro de que deseas eliminar el semestre "<span id="nombreSemestreEliminar"></span>"?</p>
+                <p class="warning-text">Esta acción eliminará todos los
+                    datos relacionados y no se puede deshacer.</p>
+                <div class="form-actions confirm-actions">
+                    <button id="btnCancelarEliminar" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button id="btnConfirmarEliminar" class="btn btn-danger">
+                        <i class="fas fa-trash-alt"></i> Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script src="assets/js/api-client.js"></script>
+    <script src="assets/js/bitacora.js"></script>
+</body>
+
+</html>

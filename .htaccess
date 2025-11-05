@@ -1,0 +1,8 @@
+# Habilitar reescritura de URLs
+RewriteEngine On
+
+# Redirigir el tráfico raíz al directorio public
+RewriteCond %{REQUEST_URI} !^/Web-Gestion-TEC/public/
+RewriteCond %{REQUEST_URI} !^/Web-Gestion-TEC/webnahim.sql
+RewriteCond %{REQUEST_URI} !^/Web-Gestion-TEC/.*\.md$
+RewriteRule ^(.*)$ /Web-Gestion-TEC/public/$1 [L]
