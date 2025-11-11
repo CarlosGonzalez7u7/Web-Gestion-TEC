@@ -24,6 +24,9 @@ let todosLosDocentes = [];
 // Almacenar todos los docentes para filtrado local
 let todosLosDocentes = [];
 
+// Almacenar todos los docentes para filtrado local
+let todosLosDocentes = [];
+
 document.addEventListener("DOMContentLoaded", async () => {
   // cerramos los modales desde que se carga la pagina por si las dudas
   const modalDocente = document.getElementById("modalDocente");
@@ -168,6 +171,7 @@ function configurarEventos() {
     console.error("Campo de búsqueda de docentes NO encontrado");
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   }
 
   // Búsqueda de requisitos
@@ -209,6 +213,8 @@ function configurarEventos() {
     });
   } else {
     console.error("❌ Campo de búsqueda de requisitos NO encontrado");
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 =======
