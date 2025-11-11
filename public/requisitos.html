@@ -9,7 +9,7 @@
     />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <title>Sistema Académico - Gestión de Docentes</title>
+    <title>Sistema Académico - Gestión de Requisitos</title>
     <link rel="stylesheet" href="assets/css/docentes.css?v=3.1" />
     <link
       rel="stylesheet"
@@ -30,12 +30,12 @@
               ><i class="fas fa-calendar-alt"></i> <span>Semestres</span></a
             >
           </li>
-          <li class="active">
+          <li>
             <a href="docentes.html"
               ><i class="fas fa-user-tie"></i> <span>Docentes</span></a
             >
           </li>
-          <li>
+          <li class="active">
             <a href="requisitos.html"
               ><i class="fas fa-clipboard-list"></i> <span>Requisitos</span></a
             >
@@ -56,9 +56,9 @@
       <main class="main-content">
         <header class="top-header">
           <div class="header-title">
-            <h1>Gestión de Docentes</h1>
+            <h1>Gestión de Requisitos</h1>
             <p>
-              Administra la información de docentes del sistema
+              Administra los requisitos del sistema académico
             </p>
           </div>
           <div class="user-profile">
@@ -70,12 +70,14 @@
         </header>
 
         <div class="content-area">
-          <!-- Sección de Docentes -->
-          <section class="card" id="docentes-section">
+          <!-- Sección de Requisitos -->
+          <section class="card" id="requisitos-section">
             <div class="card-header">
-              <h2><i class="fas fa-user-tie"></i> Gestión de Docentes</h2>
-              <button id="btnNuevoDocente" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Nuevo Docente
+              <h2>
+                <i class="fas fa-clipboard-list"></i> Gestión de Requisitos
+              </h2>
+              <button id="btnNuevoRequisito" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Nuevo Requisito
               </button>
             </div>
             <div class="card-body">
@@ -83,28 +85,24 @@
                 <i class="fas fa-search"></i>
                 <input
                   type="text"
-                  id="busqueda"
-                  placeholder="Buscar por nombre o apellidos..."
+                  id="busquedaRequisito"
+                  placeholder="Buscar requisito..."
                 />
-                <button id="btnBuscarDocentes" class="btn btn-secondary">
+                <button id="btnBuscarRequisitos" class="btn btn-secondary">
                   Buscar
                 </button>
               </div>
 
               <div class="table-responsive">
-                <table id="tablaDocentes">
+                <table id="tablaRequisitos">
                   <thead>
                     <tr>
-                      <th>ID</th>
-                      <th>Nombre</th>
-                      <th>Ap. Paterno</th>
-                      <th>Ap. Materno</th>
-                      <th>Carrera</th>
-                      <th>Fecha Registro</th>
+                      <th>#</th>
+                      <th>Requisito</th>
                       <th>Acciones</th>
                     </tr>
                   </thead>
-                  <tbody id="tbodyDocentes">
+                  <tbody id="tbodyRequisitos">
                     <!-- Datos dinámicos -->
                   </tbody>
                 </table>
@@ -115,54 +113,25 @@
       </main>
     </div>
 
-    <!-- Modal para Nuevo/Editar Docente -->
-    <div id="modalDocente" class="modal">
+    <!-- Modal para Nuevo/Editar Requisito -->
+    <div id="modalRequisito" class="modal">
       <div class="modal-content">
         <div class="modal-header">
-          <h2 id="modalDocenteTitle">Nuevo Docente</h2>
-          <button class="btn-close" id="btnCerrarModalDocente">
+          <h2 id="modalRequisitoTitle">Nuevo Requisito</h2>
+          <button class="btn-close" id="btnCerrarModalRequisito">
             <i class="fas fa-times"></i>
           </button>
         </div>
         <div class="modal-body">
-          <form id="formDocente">
-            <input type="hidden" id="docente_id" name="docente_id" />
+          <form id="formRequisito">
+            <input type="hidden" id="requisito_id" name="id" />
             <div class="form-group">
-              <label for="nombre">Nombre</label>
+              <label for="requisitoTipo">Nombre del Requisito</label>
               <input
                 type="text"
-                id="nombre"
-                name="nombre"
-                placeholder="Nombre"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label for="ap_paterno">Apellido Paterno</label>
-              <input
-                type="text"
-                id="ap_paterno"
-                name="ap_paterno"
-                placeholder="Apellido Paterno"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label for="ap_materno">Apellido Materno</label>
-              <input
-                type="text"
-                id="ap_materno"
-                name="ap_materno"
-                placeholder="Apellido Materno"
-              />
-            </div>
-            <div class="form-group">
-              <label for="carrera">Carrera</label>
-              <input
-                type="text"
-                id="carrera"
-                name="carrera"
-                placeholder="Carrera"
+                id="requisitoTipo"
+                name="requisitoTipo"
+                placeholder="Nombre del requisito"
                 required
               />
             </div>
@@ -200,6 +169,6 @@
     </div>
 
     <script src="assets/js/api-client.js?v=3.1"></script>
-    <script src="assets/js/docentes.js?v=3.1"></script>
+    <script src="assets/js/requisitos.js?v=1.1"></script>
   </body>
 </html>

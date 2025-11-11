@@ -1,27 +1,29 @@
 // Referencias a elementos DOM
-const modalConfirm     = document.getElementById("modalConfirm");
-const confirmTitle     = document.getElementById("confirmTitle");
-const confirmMessage   = document.getElementById("confirmMessage");
-const btnConfirmOk     = document.getElementById("confirmOk");
+const modalConfirm = document.getElementById("modalConfirm");
+const confirmTitle = document.getElementById("confirmTitle");
+const confirmMessage = document.getElementById("confirmMessage");
+const btnConfirmOk = document.getElementById("confirmOk");
 const btnConfirmCancel = document.getElementById("confirmCancel");
-const btnConfirmClose  = document.getElementById("confirmClose");
+const btnConfirmClose = document.getElementById("confirmClose");
 
 // Estado de la aplicación
 let currentPage = 1;
 let currentLimit = 10;
-let currentSearchTerm = '';
+let currentSearchTerm = "";
 
-// Timers para debounce
+// Timer para debounce
 let searchDocentesTimer = null;
-let searchRequisitosTimer = null;
 
 document.addEventListener("DOMContentLoaded", async () => {
+  // cerramos los modales desde que se carga la pagina por si las dudas
+  const modalDocente = document.getElementById("modalDocente");
+  if (modalDocente) modalDocente.style.display = "none";
+
   // Verificar autenticación
   await checkAuthentication();
-  
+
   // Cargar datos iniciales
   await cargarDocentes();
-  await cargarRequisitos();
 
   // Configurar modales y eventos
   configurarModales();
@@ -33,12 +35,12 @@ async function checkAuthentication() {
   try {
     const result = await AuthService.checkSession();
     if (!result || !result.success || !result.data.valid) {
-      window.location.href = '../index.html';
+      window.location.href = "../index.html";
       return;
     }
   } catch (error) {
-    console.error('Error verificando sesión:', error);
-    window.location.href = '../index.html';
+    console.error("Error verificando sesión:", error);
+    window.location.href = "../index.html";
   }
 }
 
@@ -51,6 +53,9 @@ function configurarModales() {
     "btnCerrarModalDocente"
   );
 
+  // Asegurar que el modal esté cerrado al inicio
+  if (modalDocente) modalDocente.style.display = "none";
+
   btnNuevoDocente.addEventListener("click", () => {
     document.getElementById("modalDocenteTitle").textContent = "Nuevo Docente";
     document.getElementById("formDocente").reset();
@@ -62,32 +67,10 @@ function configurarModales() {
     modalDocente.style.display = "none";
   });
 
-  // Modal de Requisitos
-  const modalRequisito = document.getElementById("modalRequisito");
-  const btnNuevoRequisito = document.getElementById("btnNuevoRequisito");
-  const btnCerrarModalRequisito = document.getElementById(
-    "btnCerrarModalRequisito"
-  );
-
-  btnNuevoRequisito.addEventListener("click", () => {
-    document.getElementById("modalRequisitoTitle").textContent =
-      "Nuevo Requisito";
-    document.getElementById("formRequisito").reset();
-    document.getElementById("requisito_id").value = "";
-    modalRequisito.style.display = "block";
-  });
-
-  btnCerrarModalRequisito.addEventListener("click", () => {
-    modalRequisito.style.display = "none";
-  });
-
-  // Cerrar modales al hacer clic fuera
+  // Cerrar modal al hacer clic fuera
   window.addEventListener("click", (event) => {
     if (event.target === modalDocente) {
       modalDocente.style.display = "none";
-    }
-    if (event.target === modalRequisito) {
-      modalRequisito.style.display = "none";
     }
   });
 }
@@ -100,12 +83,6 @@ function configurarEventos() {
     formDocente.addEventListener("submit", guardarDocente);
   }
 
-  // Formulario de requisito
-  const formRequisito = document.getElementById("formRequisito");
-  if (formRequisito) {
-    formRequisito.addEventListener("submit", guardarRequisito);
-  }
-
   // Búsqueda de docentes
   const btnBuscarDocentes = document.getElementById("btnBuscarDocentes");
   if (btnBuscarDocentes) {
@@ -116,25 +93,25 @@ function configurarEventos() {
   const busquedaInput = document.getElementById("busqueda");
   if (busquedaInput) {
     console.log("✅ Campo de búsqueda de docentes encontrado");
-    
+
     busquedaInput.addEventListener("input", (e) => {
       console.log("🔍 Evento input detectado:", e.target.value);
-      
+
       // Cancelar el timer anterior si existe
       if (searchDocentesTimer) {
         clearTimeout(searchDocentesTimer);
       }
-      
+
       // Crear un nuevo timer que ejecutará la búsqueda después de 500ms
       searchDocentesTimer = setTimeout(() => {
         console.log("⏰ Ejecutando búsqueda automática");
         buscarDocentes();
       }, 500);
     });
-    
+
     // También mantener el evento Enter para búsqueda inmediata
     busquedaInput.addEventListener("keypress", (e) => {
-      if (e.key === 'Enter') {
+      if (e.key === "Enter") {
         console.log("⚡ Enter presionado - búsqueda inmediata");
         // Cancelar el timer si existe
         if (searchDocentesTimer) {
@@ -147,51 +124,10 @@ function configurarEventos() {
     console.error("❌ Campo de búsqueda de docentes NO encontrado");
   }
 
-  // Búsqueda de requisitos
-  const btnBuscarRequisitos = document.getElementById("btnBuscarRequisitos");
-  if (btnBuscarRequisitos) {
-    btnBuscarRequisitos.addEventListener("click", buscarRequisitos);
-  }
-
-  // Búsqueda en tiempo real para requisitos
-  const busquedaRequisitoInput = document.getElementById("busquedaRequisito");
-  if (busquedaRequisitoInput) {
-    console.log("✅ Campo de búsqueda de requisitos encontrado");
-    
-    busquedaRequisitoInput.addEventListener("input", (e) => {
-      console.log("🔍 Evento input detectado en requisitos:", e.target.value);
-      
-      // Cancelar el timer anterior si existe
-      if (searchRequisitosTimer) {
-        clearTimeout(searchRequisitosTimer);
-      }
-      
-      // Crear un nuevo timer que ejecutará la búsqueda después de 500ms
-      searchRequisitosTimer = setTimeout(() => {
-        console.log("⏰ Ejecutando búsqueda automática de requisitos");
-        buscarRequisitos();
-      }, 500);
-    });
-    
-    // También mantener el evento Enter para búsqueda inmediata
-    busquedaRequisitoInput.addEventListener("keypress", (e) => {
-      if (e.key === 'Enter') {
-        console.log("⚡ Enter presionado - búsqueda inmediata de requisitos");
-        // Cancelar el timer si existe
-        if (searchRequisitosTimer) {
-          clearTimeout(searchRequisitosTimer);
-        }
-        buscarRequisitos();
-      }
-    });
-  } else {
-    console.error("❌ Campo de búsqueda de requisitos NO encontrado");
-  }
-
   // Logout
   const logoutLinks = document.querySelectorAll('a[href="../index.html"]');
-  logoutLinks.forEach(link => {
-    link.addEventListener('click', async (e) => {
+  logoutLinks.forEach((link) => {
+    link.addEventListener("click", async (e) => {
       e.preventDefault();
       await logout();
     });
@@ -201,24 +137,27 @@ function configurarEventos() {
 // ==================== DOCENTES ====================
 
 // Cargar docentes con la nueva API
-async function cargarDocentes(search = '') {
+async function cargarDocentes(search = "") {
   try {
     const params = {
       page: currentPage,
-      limit: currentLimit
+      limit: currentLimit,
     };
-    
+
     if (search) {
       params.search = search;
     }
 
     const result = await DocenteService.getAll(params);
-    
+
     if (result && result.success) {
       actualizarTablaDocentes(result.data.docentes);
       actualizarPaginacionDocentes(result.data.pagination);
     } else {
-      UIHelpers.showToast(result?.message || "Error al cargar los docentes", "error");
+      UIHelpers.showToast(
+        result?.message || "Error al cargar los docentes",
+        "error"
+      );
     }
   } catch (error) {
     console.error("Error cargando docentes:", error);
@@ -248,10 +187,14 @@ function actualizarTablaDocentes(docentes) {
             <td>${docente.carrera}</td>
             <td>${formatearFecha(docente.fec_Regist)}</td>
             <td>
-                <button class="btn-edit" onclick="abrirEdicionDocente(${docente.ID_docente})">
+                <button class="btn-edit" onclick="abrirEdicionDocente(${
+                  docente.ID_docente
+                })">
                     <i class="fas fa-edit"></i> Editar
                 </button>
-                <button class="btn-delete" onclick="eliminarDocente(${docente.ID_docente})">
+                <button class="btn-delete" onclick="eliminarDocente(${
+                  docente.ID_docente
+                })">
                     <i class="fas fa-trash-alt"></i> Eliminar
                 </button>
             </td>
@@ -263,7 +206,7 @@ function actualizarTablaDocentes(docentes) {
 // Actualizar paginación de docentes
 function actualizarPaginacionDocentes(pagination) {
   // Aquí puedes agregar lógica para mostrar controles de paginación
-  console.log('Paginación:', pagination);
+  console.log("Paginación:", pagination);
 }
 
 // Formatear fecha
@@ -275,16 +218,18 @@ function formatearFecha(fechaStr) {
 
 // Buscar docentes
 async function buscarDocentes() {
-  const termino = document.getElementById("busqueda")?.value?.trim() || '';
+  const termino = document.getElementById("busqueda")?.value?.trim() || "";
   currentSearchTerm = termino;
   currentPage = 1; // Resetear página al buscar
-  
+
   // Mostrar indicador de búsqueda
-  const searchContainer = document.querySelector('#docentes-section .search-container');
+  const searchContainer = document.querySelector(
+    "#docentes-section .search-container"
+  );
   if (searchContainer) {
-    searchContainer.classList.add('searching');
+    searchContainer.classList.add("searching");
   }
-  
+
   try {
     await cargarDocentes(termino);
   } catch (error) {
@@ -293,7 +238,7 @@ async function buscarDocentes() {
   } finally {
     // Quitar indicador de búsqueda
     if (searchContainer) {
-      searchContainer.classList.remove('searching');
+      searchContainer.classList.remove("searching");
     }
   }
 }
@@ -302,11 +247,12 @@ async function buscarDocentes() {
 async function abrirEdicionDocente(id) {
   try {
     const result = await DocenteService.getById(id);
-    
+
     if (result && result.success) {
       const docente = result.data;
-      
-      document.getElementById("modalDocenteTitle").textContent = "Editar Docente";
+
+      document.getElementById("modalDocenteTitle").textContent =
+        "Editar Docente";
       document.getElementById("docente_id").value = docente.ID_docente;
       document.getElementById("nombre").value = docente.nombre;
       document.getElementById("ap_paterno").value = docente.AP_Paterno;
@@ -315,7 +261,10 @@ async function abrirEdicionDocente(id) {
 
       document.getElementById("modalDocente").style.display = "block";
     } else {
-      UIHelpers.showToast(result?.message || "Error al cargar los datos del docente", "error");
+      UIHelpers.showToast(
+        result?.message || "Error al cargar los datos del docente",
+        "error"
+      );
     }
   } catch (error) {
     console.error("Error:", error);
@@ -331,12 +280,15 @@ async function eliminarDocente(id) {
 
   try {
     const result = await DocenteService.delete(id);
-    
+
     if (result && result.success) {
       UIHelpers.showToast("Docente eliminado correctamente", "success");
       await cargarDocentes(currentSearchTerm);
     } else {
-      UIHelpers.showToast(result?.message || "Error al eliminar el docente", "error");
+      UIHelpers.showToast(
+        result?.message || "Error al eliminar el docente",
+        "error"
+      );
     }
   } catch (error) {
     console.error("Error:", error);
@@ -347,21 +299,24 @@ async function eliminarDocente(id) {
 // Guardar docente (crear o actualizar)
 async function guardarDocente(e) {
   e.preventDefault();
-  
+
   const form = e.target;
   const formData = new FormData(form);
   const docenteId = document.getElementById("docente_id").value;
 
   const data = {
-    nombre: formData.get('nombre'),
-    AP_Paterno: formData.get('ap_paterno'),
-    AP_Materno: formData.get('ap_materno'),
-    carrera: formData.get('carrera')
+    nombre: formData.get("nombre"),
+    AP_Paterno: formData.get("ap_paterno"),
+    AP_Materno: formData.get("ap_materno"),
+    carrera: formData.get("carrera"),
   };
 
   // Mostrar indicador de carga
   const submitButton = form.querySelector('button[type="submit"]');
-  const hideLoading = UIHelpers.showLoading(submitButton, docenteId ? 'Actualizando...' : 'Creando...');
+  const hideLoading = UIHelpers.showLoading(
+    submitButton,
+    docenteId ? "Actualizando..." : "Creando..."
+  );
 
   try {
     let result;
@@ -372,175 +327,18 @@ async function guardarDocente(e) {
     }
 
     if (result && result.success) {
-      const mensaje = docenteId ? "Docente actualizado correctamente" : "Docente creado correctamente";
+      const mensaje = docenteId
+        ? "Docente actualizado correctamente"
+        : "Docente creado correctamente";
       UIHelpers.showToast(mensaje, "success");
       document.getElementById("modalDocente").style.display = "none";
       form.reset();
       await cargarDocentes(currentSearchTerm);
     } else {
-      UIHelpers.showToast(result?.message || "Error al procesar la solicitud", "error");
-    }
-  } catch (error) {
-    console.error("Error:", error);
-    UIHelpers.showToast("Error al procesar la solicitud", "error");
-  } finally {
-    hideLoading();
-  }
-}
-
-// ==================== REQUISITOS ====================
-
-// Cargar requisitos
-async function cargarRequisitos(search = '') {
-  try {
-    const params = {};
-    if (search) {
-      params.search = search;
-    }
-
-    const result = await RequisitoService.getAll(params);
-    
-    if (result && result.success) {
-      // El endpoint devuelve directamente el array de requisitos
-      actualizarTablaRequisitos(result.data || []);
-    } else {
-      UIHelpers.showToast(result?.message || "Error al cargar los requisitos", "error");
-    }
-  } catch (error) {
-    console.error("Error cargando requisitos:", error);
-    UIHelpers.showToast("Error al cargar los requisitos", "error");
-  }
-}
-
-// Actualizar tabla de requisitos
-function actualizarTablaRequisitos(requisitos) {
-  const tbody = document.getElementById("tbodyRequisitos");
-  if (!tbody) return;
-
-  tbody.innerHTML = "";
-
-  if (!requisitos || requisitos.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="3" class="text-center">No se encontraron requisitos</td></tr>`;
-    return;
-  }
-
-  requisitos.forEach((requisito) => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-            <td>${requisito.id}</td>
-            <td>${requisito.nombre}</td>
-            <td>
-                <button class="btn-edit" onclick="abrirEdicionRequisito(${requisito.id})">
-                    <i class="fas fa-edit"></i> Editar
-                </button>
-                <button class="btn-delete" onclick="eliminarRequisito(${requisito.id})">
-                    <i class="fas fa-trash-alt"></i> Eliminar
-                </button>
-            </td>
-        `;
-    tbody.appendChild(tr);
-  });
-}
-
-// Buscar requisitos
-async function buscarRequisitos() {
-  const termino = document.getElementById("busquedaRequisito")?.value?.trim() || '';
-  
-  // Mostrar indicador de búsqueda
-  const searchContainer = document.querySelector('#requisitos-section .search-container');
-  if (searchContainer) {
-    searchContainer.classList.add('searching');
-  }
-  
-  try {
-    await cargarRequisitos(termino);
-  } catch (error) {
-    console.error("Error en búsqueda:", error);
-    UIHelpers.showToast("Error al buscar requisitos", "error");
-  } finally {
-    // Quitar indicador de búsqueda
-    if (searchContainer) {
-      searchContainer.classList.remove('searching');
-    }
-  }
-}
-
-// Abrir modal para editar requisito
-async function abrirEdicionRequisito(id) {
-  try {
-    const result = await RequisitoService.getById(id);
-    
-    if (result && result.success) {
-      const requisito = result.data;
-      
-      document.getElementById("modalRequisitoTitle").textContent = "Editar Requisito";
-      document.getElementById("requisito_id").value = requisito.id;  // Usar 'id' en lugar de 'ID_requisitos'
-      document.getElementById("requisitoTipo").value = requisito.nombre;  // Usar 'nombre' en lugar de 'requisitoTipo'
-
-      document.getElementById("modalRequisito").style.display = "block";
-    } else {
-      UIHelpers.showToast(result?.message || "Error al cargar los datos del requisito", "error");
-    }
-  } catch (error) {
-    console.error("Error:", error);
-    UIHelpers.showToast("Error al cargar los datos del requisito", "error");
-  }
-}
-
-
-// Eliminar requisito
-async function eliminarRequisito(id) {
-  if (!confirm("¿Estás seguro de eliminar este requisito?")) {
-    return;
-  }
-
-  try {
-    const result = await RequisitoService.delete(id);
-    
-    if (result && result.success) {
-      UIHelpers.showToast("Requisito eliminado correctamente", "success");
-      await cargarRequisitos();
-    } else {
-      UIHelpers.showToast(result?.message || "Error al eliminar el requisito", "error");
-    }
-  } catch (error) {
-    console.error("Error:", error);
-    UIHelpers.showToast("Error al eliminar el requisito", "error");
-  }
-}
-
-// Guardar requisito (crear o actualizar)
-async function guardarRequisito(e) {
-  e.preventDefault();
-  
-  const form = e.target;
-  const formData = new FormData(form);
-  const requisitoId = document.getElementById("requisito_id").value;
-
-  const data = {
-    requisitoTipo: formData.get('requisitoTipo')
-  };
-
-  // Mostrar indicador de carga
-  const submitButton = form.querySelector('button[type="submit"]');
-  const hideLoading = UIHelpers.showLoading(submitButton, requisitoId ? 'Actualizando...' : 'Creando...');
-
-  try {
-    let result;
-    if (requisitoId) {
-      result = await RequisitoService.update(requisitoId, data);
-    } else {
-      result = await RequisitoService.create(data);
-    }
-
-    if (result && result.success) {
-      const mensaje = requisitoId ? "Requisito actualizado correctamente" : "Requisito creado correctamente";
-      UIHelpers.showToast(mensaje, "success");
-      document.getElementById("modalRequisito").style.display = "none";
-      form.reset();
-      await cargarRequisitos();
-    } else {
-      UIHelpers.showToast(result?.message || "Error al procesar la solicitud", "error");
+      UIHelpers.showToast(
+        result?.message || "Error al procesar la solicitud",
+        "error"
+      );
     }
   } catch (error) {
     console.error("Error:", error);
@@ -563,19 +361,10 @@ function formatearFecha(fechaStr) {
 async function logout() {
   try {
     await AuthService.logout();
-    window.location.href = '../index.html';
+    window.location.href = "../index.html";
   } catch (error) {
-    console.error('Error en logout:', error);
+    console.error("Error en logout:", error);
     // Aun si hay error, redirigir al login
-    window.location.href = '../index.html';
-  }
-}
-
-// Funciones de utilidad para scrolling suave
-function scrollToRequisitos(event) {
-  if (event) event.preventDefault();
-  const section = document.getElementById('requisitos-section');
-  if (section) {
-    section.scrollIntoView({ behavior: 'smooth' });
+    window.location.href = "../index.html";
   }
 }

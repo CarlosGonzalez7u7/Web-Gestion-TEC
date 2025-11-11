@@ -789,6 +789,7 @@ function mostrarEstadisticasGenerales(data) {
 
 // Declarar las funciones imprimirReporteEnVentana y exportarPDFMejorado
 function imprimirReporteEnVentana(titulo, contenido, periodo) {
+  // Abrir en una nueva pestaña (sin features) para evitar popups de ventana
   const ventanaImpresion = window.open("", "_blank");
   if (!ventanaImpresion) {
     throw new Error(
@@ -796,45 +797,60 @@ function imprimirReporteEnVentana(titulo, contenido, periodo) {
     );
   }
 
+  // Detectar si el contenido ya incluye su propio encabezado para no duplicarlo
+  const temp = document.createElement("div");
+  temp.innerHTML = contenido;
+  const yaTieneHeader = !!temp.querySelector(".reporte-header");
+
   let contenidoHTML = `
     <html>
     <head>
       <title>${titulo}</title>
       <style>
-        body { font-family: Arial, sans-serif; }
-        .reporte-header { text-align: center; margin-bottom: 20px; }
-        .reporte-body { padding: 20px; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #333; }
+        .reporte-header { text-align: center; margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+        .reporte-header h1 { margin: 0; color: #1e40af; font-size: 24px; }
+        .reporte-header p { margin: 5px 0; color: #666; font-size: 14px; }
+        .reporte-body { padding: 20px 0; }
         .reporte-tabla { width: 100%; border-collapse: collapse; }
         .reporte-tabla th, .reporte-tabla td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         .reporte-tabla th { background-color: #f2f2f2; }
-        .estado-no-seleccionado { display: none; }
+        .estado-no-seleccionado { display: none !important; }
+        @media print { body { padding: 0; margin: 0; } }
       </style>
     </head>
     <body>
+  `;
+
+  if (!yaTieneHeader) {
+    contenidoHTML += `
       <div class="reporte-header">
         <h1>${titulo}</h1>
         <p>Fecha de generación: ${new Date().toLocaleDateString()}</p>
-  `;
-
-  if (periodo) {
-    contenidoHTML += `<p>${periodo}</p>`;
+        ${periodo ? `<p>${periodo}</p>` : ""}
+      </div>
+    `;
   }
 
   contenidoHTML += `
-      </div>
       <div class="reporte-body">
         ${contenido}
       </div>
+      <script>
+        // Imprimir automáticamente cuando cargue y cerrar
+        window.onload = function(){
+          setTimeout(function(){
+            window.print();
+            setTimeout(function(){ window.close(); }, 500);
+          }, 300);
+        };
+      <\/script>
     </body>
     </html>
   `;
 
   ventanaImpresion.document.write(contenidoHTML);
   ventanaImpresion.document.close();
-
-  ventanaImpresion.focus(); // Asegura que la ventana esté enfocada antes de imprimir
-  ventanaImpresion.print();
-  ventanaImpresion.close();
 }
 
 // Modificar la función exportarPDFMejorado para incluir solo los estados seleccionados
