@@ -4,6 +4,7 @@ let currentSemesterId = null;
 let semestreSeleccionado = null;
 let todosDocentes = [];
 let todosRequisitos = [];
+let todosSemestres = [];
 
 // Timer para debounce de búsqueda
 let searchDocentesTimer = null;
@@ -56,6 +57,13 @@ function configurarEventosSemestre() {
   const btnNuevoSemestre = document.getElementById('btnNuevoSemestre');
   if (btnNuevoSemestre) {
     btnNuevoSemestre.addEventListener('click', () => {
+      editarSemestreId = null; // Asegurar que estamos en modo crear
+      document.getElementById('formSemestre').reset(); // Limpiar el formulario
+      
+      // Cambiar título y botón a modo crear
+      document.querySelector('#semestreFormOverlay .overlay-header h2').innerHTML = '<i class="fas fa-plus-circle"></i> Crear Nuevo Semestre';
+      document.querySelector('#formSemestre button[type="submit"]').innerHTML = '<i class="fas fa-save"></i> Crear Semestre';
+      
       document.getElementById('semestreFormOverlay').style.display = 'flex';
     });
   }
@@ -66,15 +74,25 @@ function configurarEventosSemestre() {
     btnCerrarForm.addEventListener('click', () => {
       document.getElementById('semestreFormOverlay').style.display = 'none';
       document.getElementById('formSemestre').reset();
+      editarSemestreId = null; // Limpiar el ID al cerrar
+      
+      // Restaurar título y botón a modo crear
+      document.querySelector('#semestreFormOverlay .overlay-header h2').innerHTML = '<i class="fas fa-plus-circle"></i> Crear Nuevo Semestre';
+      document.querySelector('#formSemestre button[type="submit"]').innerHTML = '<i class="fas fa-save"></i> Crear Semestre';
     });
   }
 
-  // Formulario de crear semestre
+  // Formulario de crear/editar semestre
   const formSemestre = document.getElementById('formSemestre');
   if (formSemestre) {
     formSemestre.addEventListener('submit', async (e) => {
       e.preventDefault();
-      await crearSemestre();
+      // Si editarSemestreId tiene un valor, estamos editando; si no, estamos creando
+      if (editarSemestreId) {
+        await actualizarSemestre(editarSemestreId);
+      } else {
+        await crearSemestre();
+      }
     });
   }
 
@@ -92,6 +110,42 @@ function configurarEventosSemestre() {
   if (masterRequisitos) {
     masterRequisitos.addEventListener('change', (e) => {
       const checkboxes = document.querySelectorAll('#checkRequisitos input[type="checkbox"]');
+      checkboxes.forEach(cb => cb.checked = e.target.checked);
+    });
+  }
+
+  // Master checkbox para docentes actuales en modal de edición
+  const masterDocentesActuales = document.getElementById('masterDocentesActuales');
+  if (masterDocentesActuales) {
+    masterDocentesActuales.addEventListener('change', (e) => {
+      const checkboxes = document.querySelectorAll('#listaDocentesActuales input[type="checkbox"]');
+      checkboxes.forEach(cb => cb.checked = e.target.checked);
+    });
+  }
+
+  // Master checkbox para docentes disponibles en modal de edición
+  const masterDocentesDisponibles = document.getElementById('masterDocentesDisponibles');
+  if (masterDocentesDisponibles) {
+    masterDocentesDisponibles.addEventListener('change', (e) => {
+      const checkboxes = document.querySelectorAll('#listaDocentesDisponibles input[type="checkbox"]');
+      checkboxes.forEach(cb => cb.checked = e.target.checked);
+    });
+  }
+
+  // Master checkbox para requisitos actuales en modal de edición
+  const masterRequisitosActuales = document.getElementById('masterRequisitosActuales');
+  if (masterRequisitosActuales) {
+    masterRequisitosActuales.addEventListener('change', (e) => {
+      const checkboxes = document.querySelectorAll('#listaRequisitosActuales input[type="checkbox"]');
+      checkboxes.forEach(cb => cb.checked = e.target.checked);
+    });
+  }
+
+  // Master checkbox para requisitos disponibles en modal de edición
+  const masterRequisitosDisponibles = document.getElementById('masterRequisitosDisponibles');
+  if (masterRequisitosDisponibles) {
+    masterRequisitosDisponibles.addEventListener('change', (e) => {
+      const checkboxes = document.querySelectorAll('#listaRequisitosDisponibles input[type="checkbox"]');
       checkboxes.forEach(cb => cb.checked = e.target.checked);
     });
   }
@@ -150,6 +204,40 @@ function configurarEventosSemestre() {
     });
   }
 
+  // Modal de confirmación de eliminación
+  const btnCerrarConfirmarEliminar = document.getElementById('btnCerrarConfirmarEliminar');
+  if (btnCerrarConfirmarEliminar) {
+    btnCerrarConfirmarEliminar.addEventListener('click', () => {
+      document.getElementById('confirmarEliminarModal').style.display = 'none';
+      semestreAEliminarId = null;
+      eliminarDesdeTabla = false;
+    });
+  }
+
+  const btnCancelarEliminar = document.getElementById('btnCancelarEliminar');
+  if (btnCancelarEliminar) {
+    btnCancelarEliminar.addEventListener('click', () => {
+      document.getElementById('confirmarEliminarModal').style.display = 'none';
+      semestreAEliminarId = null;
+      eliminarDesdeTabla = false;
+    });
+  }
+
+  const btnConfirmarEliminar = document.getElementById('btnConfirmarEliminar');
+  if (btnConfirmarEliminar) {
+    btnConfirmarEliminar.addEventListener('click', async () => {
+      await ejecutarEliminacionSemestre();
+    });
+  }
+
+  // Búsqueda de semestres
+  const busquedaSemestre = document.getElementById('busquedaSemestre');
+  if (busquedaSemestre) {
+    busquedaSemestre.addEventListener('input', (e) => {
+      filtrarSemestres(e.target.value);
+    });
+  }
+
   // Búsqueda de docentes en la tabla
   const busquedaDocente = document.getElementById('busquedaDocente');
   if (busquedaDocente) {
@@ -184,6 +272,32 @@ function configurarEventosSemestre() {
   } else {
     console.error("Campo de búsqueda de docentes NO encontrado");
   }
+}
+
+// Filtrar semestres por búsqueda
+function filtrarSemestres(busqueda) {
+  if (!todosSemestres || todosSemestres.length === 0) return;
+
+  const busquedaLower = busqueda.toLowerCase().trim();
+
+  // Si la búsqueda está vacía, mostrar todos los semestres
+  if (busquedaLower === '') {
+    mostrarSemestres(todosSemestres);
+    return;
+  }
+
+  // Filtrar semestres que coincidan con el nombre o fechas
+  const semestresFiltrados = todosSemestres.filter(semestre => {
+    const nombre = semestre.nomSem.toLowerCase();
+    const fechaInicio = formatearFecha(semestre.fecha_inicio).toLowerCase();
+    const fechaFin = formatearFecha(semestre.fecha_fin).toLowerCase();
+    
+    return nombre.includes(busquedaLower) || 
+           fechaInicio.includes(busquedaLower) || 
+           fechaFin.includes(busquedaLower);
+  });
+
+  mostrarSemestres(semestresFiltrados);
 }
 
 // Filtrar docentes en la tabla de bitácora
@@ -234,7 +348,8 @@ async function cargarSemestres() {
     const result = await SemestreService.getAll();
     
     if (result && result.success) {
-      mostrarSemestres(result.data || []);
+      todosSemestres = result.data || [];
+      mostrarSemestres(todosSemestres);
     } else {
       UIHelpers.showToast('Error al cargar semestres', 'error');
     }
@@ -332,6 +447,12 @@ async function crearSemestre() {
       UIHelpers.showToast('Semestre creado exitosamente', 'success');
       document.getElementById('semestreFormOverlay').style.display = 'none';
       document.getElementById('formSemestre').reset();
+      editarSemestreId = null; // Limpiar el ID después de crear
+      
+      // Restaurar título y botón a modo crear
+      document.querySelector('#semestreFormOverlay .overlay-header h2').innerHTML = '<i class="fas fa-plus-circle"></i> Crear Nuevo Semestre';
+      document.querySelector('#formSemestre button[type="submit"]').innerHTML = '<i class="fas fa-save"></i> Crear Semestre';
+      
       await cargarSemestres();
     } else {
       UIHelpers.showToast(result?.message || 'Error al crear semestre', 'error');
@@ -344,43 +465,64 @@ async function crearSemestre() {
 
 // ==================== ELIMINAR SEMESTRE ====================
 
-async function eliminarSemestre(id) {
-  if (!confirm('¿Estás seguro de que deseas eliminar este semestre? Se eliminarán todos los registros de bitácora asociados.')) {
-    return;
-  }
+// Variable para almacenar temporalmente el ID y origen del semestre a eliminar
+let semestreAEliminarId = null;
+let eliminarDesdeTabla = false;
 
-  try {
-    const result = await SemestreService.delete(id);
-
-    if (result && result.success) {
-      UIHelpers.showToast(result.message || 'Semestre eliminado exitosamente', 'success');
-      await cargarSemestres();
-    } else {
-      UIHelpers.showToast(result?.message || 'Error al eliminar semestre', 'error');
+// Mostrar modal de confirmación de eliminación
+function mostrarModalEliminarSemestre(id, desdeTabla = false) {
+  semestreAEliminarId = id;
+  eliminarDesdeTabla = desdeTabla;
+  
+  // Obtener el nombre del semestre para mostrarlo en el modal
+  let nombreSemestre = 'este semestre';
+  
+  if (desdeTabla && semestreSeleccionado) {
+    nombreSemestre = semestreSeleccionado.nomSem;
+  } else {
+    // Buscar el semestre en el array de semestres
+    const semestre = todosSemestres.find(s => s.ID_semestre == id);
+    if (semestre) {
+      nombreSemestre = semestre.nomSem;
     }
-  } catch (error) {
-    console.error('Error eliminando semestre:', error);
-    UIHelpers.showToast('Error al eliminar semestre', 'error');
   }
+  
+  document.getElementById('nombreSemestreEliminar').textContent = nombreSemestre;
+  document.getElementById('confirmarEliminarModal').style.display = 'flex';
+}
+
+async function eliminarSemestre(id) {
+  mostrarModalEliminarSemestre(id, false);
 }
 
 // Eliminar semestre desde la tabla de bitácora
 async function eliminarSemestreDesdeTabla(id) {
-  if (!confirm('¿Estás seguro de que deseas eliminar este semestre? Se eliminarán todos los registros de bitácora asociados.')) {
-    return;
-  }
+  mostrarModalEliminarSemestre(id, true);
+}
 
+// Ejecutar la eliminación del semestre
+async function ejecutarEliminacionSemestre() {
+  if (!semestreAEliminarId) return;
+  
+  const id = semestreAEliminarId;
+  const desdeTabla = eliminarDesdeTabla;
+  
+  // Cerrar el modal
+  document.getElementById('confirmarEliminarModal').style.display = 'none';
+  
   try {
     const result = await SemestreService.delete(id);
 
     if (result && result.success) {
       UIHelpers.showToast(result.message || 'Semestre eliminado exitosamente', 'success');
       
-      // Volver a la lista de semestres
-      document.getElementById('tablaBitacora').style.display = 'none';
-      document.getElementById('semestresList').style.display = 'block';
-      currentSemesterId = null;
-      semestreSeleccionado = null;
+      if (desdeTabla) {
+        // Volver a la lista de semestres
+        document.getElementById('tablaBitacora').style.display = 'none';
+        document.getElementById('semestresList').style.display = 'block';
+        currentSemesterId = null;
+        semestreSeleccionado = null;
+      }
       
       // Recargar la lista
       await cargarSemestres();
@@ -390,6 +532,10 @@ async function eliminarSemestreDesdeTabla(id) {
   } catch (error) {
     console.error('Error eliminando semestre:', error);
     UIHelpers.showToast('Error al eliminar semestre', 'error');
+  } finally {
+    // Limpiar variables temporales
+    semestreAEliminarId = null;
+    eliminarDesdeTabla = false;
   }
 }
 
@@ -402,20 +548,20 @@ async function editarSemestre(id) {
     if (result && result.success) {
       const semestre = result.data;
       
-      // Mostrar modal de edición (reutilizar el mismo formulario)
+      // Establecer el ID del semestre a editar
+      editarSemestreId = id;
+      
+      // Llenar el formulario con los datos del semestre
       document.getElementById('nomSem').value = semestre.nomSem;
       document.getElementById('fecha_inicio').value = semestre.fecha_inicio;
       document.getElementById('fecha_fin').value = semestre.fecha_fin;
       
-      editarSemestreId = id;
-      document.getElementById('semestreFormOverlay').style.display = 'flex';
+      // Cambiar título y botón a modo editar
+      document.querySelector('#semestreFormOverlay .overlay-header h2').innerHTML = '<i class="fas fa-edit"></i> Editar Semestre';
+      document.querySelector('#formSemestre button[type="submit"]').innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
       
-      // Cambiar el submit del formulario
-      const form = document.getElementById('formSemestre');
-      form.onsubmit = async (e) => {
-        e.preventDefault();
-        await actualizarSemestre(id);
-      };
+      // Mostrar el modal
+      document.getElementById('semestreFormOverlay').style.display = 'flex';
     }
   } catch (error) {
     console.error('Error cargando semestre:', error);
@@ -446,12 +592,9 @@ async function actualizarSemestre(id) {
       document.getElementById('formSemestre').reset();
       editarSemestreId = null;
       
-      // Restaurar el submit original
-      const form = document.getElementById('formSemestre');
-      form.onsubmit = async (e) => {
-        e.preventDefault();
-        await crearSemestre();
-      };
+      // Restaurar título y botón a modo crear
+      document.querySelector('#semestreFormOverlay .overlay-header h2').innerHTML = '<i class="fas fa-plus-circle"></i> Crear Nuevo Semestre';
+      document.querySelector('#formSemestre button[type="submit"]').innerHTML = '<i class="fas fa-save"></i> Crear Semestre';
       
       await cargarSemestres();
     } else {
@@ -664,15 +807,33 @@ async function guardarEdicionRequisitos() {
     ...Array.from(disponiblesChecked).map(cb => cb.value)
   ];
 
+  // Validar que se hayan seleccionado requisitos
+  if (requisitosSeleccionados.length === 0) {
+    UIHelpers.showToast('Debe seleccionar al menos un requisito', 'warning');
+    return;
+  }
+
   // Obtener todos los docentes actuales del semestre
   try {
     const docentesResult = await SemestreService.getDocentes(currentSemesterId);
     const docentesActuales = docentesResult.success ? docentesResult.data : [];
     const idsDocentes = docentesActuales.map(d => d.ID_docente);
 
-    // Guardar configuración con los docentes actuales y los nuevos requisitos
+    // Si no hay docentes asignados, usar todos los docentes disponibles
+    let docentesParaGuardar = idsDocentes;
+    if (docentesParaGuardar.length === 0) {
+      // Si es un semestre nuevo sin docentes, asignar todos los docentes disponibles
+      docentesParaGuardar = todosDocentes.map(d => d.ID_docente);
+      
+      if (docentesParaGuardar.length === 0) {
+        UIHelpers.showToast('No hay docentes disponibles. Por favor, cree docentes primero.', 'warning');
+        return;
+      }
+    }
+
+    // Guardar configuración con los docentes y los nuevos requisitos
     const result = await SemestreService.saveConfiguration(currentSemesterId, {
-      docentes: idsDocentes,
+      docentes: docentesParaGuardar,
       requisitos: requisitosSeleccionados
     });
 
@@ -775,16 +936,34 @@ async function guardarEdicionDocentes() {
     ...Array.from(disponiblesChecked).map(cb => cb.value)
   ];
 
+  // Validar que se hayan seleccionado docentes
+  if (docentesSeleccionados.length === 0) {
+    UIHelpers.showToast('Debe seleccionar al menos un docente', 'warning');
+    return;
+  }
+
   // Obtener todos los requisitos actuales del semestre
   try {
     const requisitosResult = await SemestreService.getRequisitos(currentSemesterId);
     const requisitosActuales = requisitosResult.success ? requisitosResult.data : [];
     const idsRequisitos = requisitosActuales.map(r => r.ID_requisitos);
 
-    // Guardar configuración con los nuevos docentes y los requisitos actuales
+    // Si no hay requisitos asignados, usar todos los requisitos disponibles
+    let requisitosParaGuardar = idsRequisitos;
+    if (requisitosParaGuardar.length === 0) {
+      // Si es un semestre nuevo sin requisitos, asignar todos los requisitos disponibles
+      requisitosParaGuardar = todosRequisitos.map(r => r.id);
+      
+      if (requisitosParaGuardar.length === 0) {
+        UIHelpers.showToast('No hay requisitos disponibles. Por favor, cree requisitos primero.', 'warning');
+        return;
+      }
+    }
+
+    // Guardar configuración con los nuevos docentes y los requisitos
     const result = await SemestreService.saveConfiguration(currentSemesterId, {
       docentes: docentesSeleccionados,
-      requisitos: idsRequisitos
+      requisitos: requisitosParaGuardar
     });
 
     if (result && result.success) {
