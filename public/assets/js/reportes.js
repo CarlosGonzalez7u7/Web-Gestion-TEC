@@ -746,20 +746,20 @@ function mostrarEstadisticasGenerales(data) {
               </tr>
             </thead>
             <tbody>
-              <tr>
+              <tr class="estado-cumple">
                 <td>Cumple</td>
-                <td>${data.estadosCumplimiento.cumple}</td>
-                <td>${data.estadosCumplimiento.porcentajeCumple}%</td>
+                <td>${data.estadosCumplimiento.cumple || 0}</td>
+                <td>${data.estadosCumplimiento.porcentajeCumple || 0}%</td>
               </tr>
-              <tr>
+              <tr class="estado-no-cumple">
                 <td>No Cumple</td>
-                <td>${data.estadosCumplimiento.noCumple}</td>
-                <td>${data.estadosCumplimiento.porcentajeNoCumple}%</td>
+                <td>${data.estadosCumplimiento.noCumple || 0}</td>
+                <td>${data.estadosCumplimiento.porcentajeNoCumple || 0}%</td>
               </tr>
-              <tr>
+              <tr class="estado-incompleto">
                 <td>Incompleto</td>
-                <td>${data.estadosCumplimiento.incompleto}</td>
-                <td>${data.estadosCumplimiento.porcentajeIncompleto}%</td>
+                <td>${data.estadosCumplimiento.incompleto || 0}</td>
+                <td>${data.estadosCumplimiento.porcentajeIncompleto || 0}%</td>
               </tr>
             </tbody>
           </table>

@@ -884,8 +884,8 @@ function mostrarBitacora(bitacora) {
         const registroId = registro.id;
         const estado = registro.estado || 'Incompleto';
         const comentario = registro.comentario || '';
-        const estadoClass = estado === 'Completo' ? 'completo' : 'incompleto';
-        const estadoIcon = estado === 'Completo' ? '✓' : '⚠';
+        const estadoClass = estado === 'Cumple' ? 'cumple' : estado === 'No Cumple' ? 'no-cumple' : 'incompleto';
+        const estadoIcon = estado === 'Cumple' ? '✓' : '⚠';
         
         html += `
           <td class="requisito-cell">
@@ -894,7 +894,8 @@ function mostrarBitacora(bitacora) {
                 <i class="fas fa-exclamation-triangle"></i>
                 <select onchange="actualizarEstadoCell(${registroId}, this.value)" data-registro-id="${registroId}">
                   <option value="Incompleto" ${estado === 'Incompleto' ? 'selected' : ''}>Incompleto</option>
-                  <option value="Completo" ${estado === 'Completo' ? 'selected' : ''}>Completo</option>
+                  <option value="Cumple" ${estado === 'Cumple' ? 'selected' : ''}>Cumple</option>
+                  <option value="No Cumple" ${estado === 'No Cumple' ? 'selected' : ''}>No Cumple</option>
                 </select>
                 <i class="fas fa-chevron-down"></i>
               </div>
@@ -929,8 +930,14 @@ function actualizarColoresEstado() {
   document.querySelectorAll('.estado-selector select').forEach(select => {
     const estado = select.value;
     const parent = select.closest('.estado-selector');
-    parent.classList.remove('completo', 'incompleto');
-    parent.classList.add(estado === 'Completo' ? 'completo' : 'incompleto');
+    parent.classList.remove('cumple', 'no-cumple', 'incompleto');
+    if (estado === 'Cumple') {
+      parent.classList.add('cumple');
+    } else if (estado === 'No Cumple') {
+      parent.classList.add('no-cumple');
+    } else {
+      parent.classList.add('incompleto');
+    }
   });
 }
 

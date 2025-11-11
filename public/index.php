@@ -732,7 +732,7 @@ elseif ($endpoint === 'bitacora') {
                 
                 // Insertar nuevas combinaciones docente-requisito
                 if (!empty($docentes) && !empty($requisitos)) {
-                    $insertStmt = $conn->prepare("INSERT INTO bitacora_semestre (ID_semestre, ID_docente, ID_requisito, cumple, estado, comentario) VALUES (?, ?, ?, 0, 'Pendiente', '')");
+                    $insertStmt = $conn->prepare("INSERT INTO bitacora_semestre (ID_semestre, ID_docente, ID_requisito, cumple, estado, comentario) VALUES (?, ?, ?, 0, 'Incompleto', '')");
                     
                     foreach ($docentes as $docente_id) {
                         foreach ($requisitos as $requisito_id) {
@@ -754,15 +754,38 @@ elseif ($endpoint === 'bitacora') {
         elseif ($action === 'update' && $_SERVER['REQUEST_METHOD'] === 'PUT') {
             $input = json_decode(file_get_contents('php://input'), true);
             $id = $input['id'] ?? '';
-            $estado = $input['estado'] ?? '';
-            $comentario = $input['comentario'] ?? '';
             
             if (empty($id)) {
                 sendResponse(false, null, 'ID requerido', 400);
             }
             
-            $stmt = $conn->prepare("UPDATE bitacora_semestre SET estado = ?, comentario = ? WHERE ID = ?");
-            $stmt->bind_param("ssi", $estado, $comentario, $id);
+            // Construir la consulta dinámicamente solo con los campos que se envían
+            $updates = [];
+            $params = [];
+            $types = '';
+            
+            if (isset($input['estado'])) {
+                $updates[] = "estado = ?";
+                $params[] = $input['estado'];
+                $types .= 's';
+            }
+            
+            if (isset($input['comentario'])) {
+                $updates[] = "comentario = ?";
+                $params[] = $input['comentario'];
+                $types .= 's';
+            }
+            
+            if (empty($updates)) {
+                sendResponse(false, null, 'No hay campos para actualizar', 400);
+            }
+            
+            $params[] = $id;
+            $types .= 'i';
+            
+            $sql = "UPDATE bitacora_semestre SET " . implode(', ', $updates) . " WHERE ID = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param($types, ...$params);
             
             if ($stmt->execute()) {
                 sendResponse(true, null, 'Bitácora actualizada exitosamente');
@@ -842,7 +865,8 @@ elseif ($endpoint === 'reportes') {
                         $estadosCumplimiento['noCumple'] = $row['cantidad'];
                         break;
                     case 'Incompleto':
-                        $estadosCumplimiento['incompleto'] = $row['cantidad'];
+                    case 'Pendiente':  // Tratar Pendiente como Incompleto para compatibilidad
+                        $estadosCumplimiento['incompleto'] += $row['cantidad'];
                         break;
                 }
             }

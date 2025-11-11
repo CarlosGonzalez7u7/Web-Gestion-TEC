@@ -1040,14 +1040,24 @@ textarea {
   color: #f59e0b;
 }
 
-.estado-selector.completo {
+.estado-selector.cumple {
   background-color: #d1fae5;
   border: 1px solid #34d399;
   color: #065f46;
 }
 
-.estado-selector.completo .fa-exclamation-triangle {
+.estado-selector.cumple .fa-exclamation-triangle {
   display: none;
+}
+
+.estado-selector.no-cumple {
+  background-color: #fee2e2;
+  border: 1px solid #f87171;
+  color: #991b1b;
+}
+
+.estado-selector.no-cumple .fa-exclamation-triangle {
+  color: #dc2626;
 }
 
 .estado-selector select {
