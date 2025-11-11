@@ -204,8 +204,11 @@ elseif ($endpoint === 'docentes') {
                 sendResponse(false, null, 'Faltan campos requeridos', 400);
             }
             
-            $stmt = $conn->prepare("INSERT INTO docentes (nombre, AP_Paterno, AP_Materno, carrera) VALUES (?, ?, ?, ?)");
-            $stmt->bind_param("ssss", $nombre, $ap_paterno, $ap_materno, $carrera);
+            // Obtener la fecha actual en formato Y-m-d
+            $fec_regist = date('Y-m-d');
+            
+            $stmt = $conn->prepare("INSERT INTO docentes (nombre, AP_Paterno, AP_Materno, carrera, fec_Regist) VALUES (?, ?, ?, ?, ?)");
+            $stmt->bind_param("sssss", $nombre, $ap_paterno, $ap_materno, $carrera, $fec_regist);
             
             if ($stmt->execute()) {
                 sendResponse(true, ['id' => $conn->insert_id], 'Docente creado exitosamente');
@@ -725,20 +728,50 @@ elseif ($endpoint === 'bitacora') {
             $conn->begin_transaction();
             
             try {
-                // Eliminar configuración anterior del semestre
-                $deleteStmt = $conn->prepare("DELETE FROM bitacora_semestre WHERE ID_semestre = ?");
-                $deleteStmt->bind_param("i", $semestre_id);
-                $deleteStmt->execute();
+                // Obtener configuración existente para preservar estados y comentarios
+                $stmt = $conn->prepare("SELECT ID, ID_docente, ID_requisito, estado, comentario FROM bitacora_semestre WHERE ID_semestre = ?");
+                $stmt->bind_param("i", $semestre_id);
+                $stmt->execute();
+                $result = $stmt->get_result();
                 
-                // Insertar nuevas combinaciones docente-requisito
-                if (!empty($docentes) && !empty($requisitos)) {
+                $existing = [];
+                while ($row = $result->fetch_assoc()) {
+                    $key = $row['ID_docente'] . '-' . $row['ID_requisito'];
+                    $existing[$key] = [
+                        'id' => $row['ID'],
+                        'estado' => $row['estado'],
+                        'comentario' => $row['comentario']
+                    ];
+                }
+                
+                // Crear conjunto de combinaciones deseadas
+                $desired = [];
+                foreach ($docentes as $docente_id) {
+                    foreach ($requisitos as $requisito_id) {
+                        $desired[] = $docente_id . '-' . $requisito_id;
+                    }
+                }
+                
+                // Eliminar solo las combinaciones que ya no están en el conjunto deseado
+                $toDelete = array_diff(array_keys($existing), $desired);
+                if (!empty($toDelete)) {
+                    $deleteStmt = $conn->prepare("DELETE FROM bitacora_semestre WHERE ID = ?");
+                    foreach ($toDelete as $key) {
+                        $id = $existing[$key]['id'];
+                        $deleteStmt->bind_param("i", $id);
+                        $deleteStmt->execute();
+                    }
+                }
+                
+                // Insertar solo las nuevas combinaciones (preservando las existentes)
+                $toInsert = array_diff($desired, array_keys($existing));
+                if (!empty($toInsert)) {
                     $insertStmt = $conn->prepare("INSERT INTO bitacora_semestre (ID_semestre, ID_docente, ID_requisito, cumple, estado, comentario) VALUES (?, ?, ?, 0, 'Incompleto', '')");
                     
-                    foreach ($docentes as $docente_id) {
-                        foreach ($requisitos as $requisito_id) {
-                            $insertStmt->bind_param("iii", $semestre_id, $docente_id, $requisito_id);
-                            $insertStmt->execute();
-                        }
+                    foreach ($toInsert as $key) {
+                        list($docente_id, $requisito_id) = explode('-', $key);
+                        $insertStmt->bind_param("iii", $semestre_id, $docente_id, $requisito_id);
+                        $insertStmt->execute();
                     }
                 }
                 

@@ -31,6 +31,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Configurar modales
   configurarModales();
+  
+  // Configurar eventos de logout
+  const logoutLinks = document.querySelectorAll('a[href="index.html"], .logout a');
+  logoutLinks.forEach(link => {
+    link.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await logout();
+    });
+  });
 });
 
 // Función para mostrar notificaciones toast
@@ -216,8 +225,8 @@ async function iniciarReporteSemestre() {
 
       result.data.forEach((semestre) => {
         const option = document.createElement("option");
-        option.value = semestre.id;
-        option.textContent = semestre.nombre;
+        option.value = semestre.ID_semestre;
+        option.textContent = semestre.nomSem;
         selectSemestre.appendChild(option);
       });
 
@@ -1052,20 +1061,9 @@ async function checkAuthentication() {
 async function logout() {
   try {
     await AuthService.logout();
-    window.location.href = '../index.html';
+    window.location.href = 'index.html';
   } catch (error) {
     console.error('Error en logout:', error);
-    window.location.href = '../index.html';
+    window.location.href = 'index.html';
   }
 }
-
-// Configurar eventos de logout
-document.addEventListener("DOMContentLoaded", () => {
-  const logoutLinks = document.querySelectorAll('a[href="../index.html"]');
-  logoutLinks.forEach(link => {
-    link.addEventListener('click', async (e) => {
-      e.preventDefault();
-      await logout();
-    });
-  });
-});
