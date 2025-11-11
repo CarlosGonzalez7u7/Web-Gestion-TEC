@@ -9,8 +9,8 @@
     />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <title>Sistema Académico - Gestión de Docentes y Requisitos</title>
-    <link rel="stylesheet" href="assets/css/docentes.css?v=3.0" />
+    <title>Sistema Académico - Gestión de Docentes</title>
+    <link rel="stylesheet" href="assets/css/docentes.css?v=3.1" />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
@@ -36,7 +36,7 @@
             >
           </li>
           <li>
-            <a href="javascript:void(0);" onclick="scrollToRequisitos(event)"
+            <a href="requisitos.html"
               ><i class="fas fa-clipboard-list"></i> <span>Requisitos</span></a
             >
           </li>
@@ -56,9 +56,9 @@
       <main class="main-content">
         <header class="top-header">
           <div class="header-title">
-            <h1>Gestión de Docentes y Requisitos</h1>
+            <h1>Gestión de Docentes</h1>
             <p>
-              Administra la información de docentes y requisitos del sistema
+              Administra la información de docentes del sistema
             </p>
           </div>
           <div class="user-profile">
@@ -105,46 +105,6 @@
                     </tr>
                   </thead>
                   <tbody id="tbodyDocentes">
-                    <!-- Datos dinámicos -->
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-
-          <!-- Sección de Requisitos -->
-          <section class="card" id="requisitos-section">
-            <div class="card-header">
-              <h2>
-                <i class="fas fa-clipboard-list"></i> Gestión de Requisitos
-              </h2>
-              <button id="btnNuevoRequisito" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Nuevo Requisito
-              </button>
-            </div>
-            <div class="card-body">
-              <div class="search-container">
-                <i class="fas fa-search"></i>
-                <input
-                  type="text"
-                  id="busquedaRequisito"
-                  placeholder="Buscar requisito..."
-                />
-                <button id="btnBuscarRequisitos" class="btn btn-secondary">
-                  Buscar
-                </button>
-              </div>
-
-              <div class="table-responsive">
-                <table id="tablaRequisitos">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Requisito</th>
-                      <th>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody id="tbodyRequisitos">
                     <!-- Datos dinámicos -->
                   </tbody>
                 </table>
@@ -216,38 +176,6 @@
       </div>
     </div>
 
-    <!-- Modal para Nuevo/Editar Requisito -->
-    <div id="modalRequisito" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2 id="modalRequisitoTitle">Nuevo Requisito</h2>
-          <button class="btn-close" id="btnCerrarModalRequisito">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        <div class="modal-body">
-          <form id="formRequisito">
-            <input type="hidden" id="requisito_id" name="id" />
-            <div class="form-group">
-              <label for="requisitoTipo">Nombre del Requisito</label>
-              <input
-                type="text"
-                id="requisitoTipo"
-                name="requisitoTipo"
-                placeholder="Nombre del requisito"
-                required
-              />
-            </div>
-            <div class="form-actions">
-              <button type="submit" class="btn btn-primary">
-                <i class="fas fa-save"></i> Guardar
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
     <div id="toast-container"></div>
 
     <div id="modalConfirm" class="modal" style="display: none">
@@ -272,7 +200,7 @@
     </div>
 
 
-    <script src="assets/js/api-client.js?v=3.0"></script>
-    <script src="assets/js/docentes.js?v=3.0"></script>
+    <script src="assets/js/api-client.js?v=3.1"></script>
+    <script src="assets/js/docentes.js?v=3.1"></script>
   </body>
 </html>

@@ -732,11 +732,7 @@ elseif ($endpoint === 'bitacora') {
                 
                 // Insertar nuevas combinaciones docente-requisito
                 if (!empty($docentes) && !empty($requisitos)) {
-<<<<<<< Updated upstream
                     $insertStmt = $conn->prepare("INSERT INTO bitacora_semestre (ID_semestre, ID_docente, ID_requisito, cumple, estado, comentario) VALUES (?, ?, ?, 0, 'Incompleto', '')");
-=======
-                    $insertStmt = $conn->prepare("INSERT INTO bitacora_semestre (ID_semestre, ID_docente, ID_requisito, cumple, estado, comentario) VALUES (?, ?, ?, 0, 'Pendiente', '')");
->>>>>>> Stashed changes
                     
                     foreach ($docentes as $docente_id) {
                         foreach ($requisitos as $requisito_id) {

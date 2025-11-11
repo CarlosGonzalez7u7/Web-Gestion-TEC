@@ -11,9 +11,8 @@ let currentPage = 1;
 let currentLimit = 10;
 let currentSearchTerm = "";
 
-// Timers para debounce
+// Timer para debounce
 let searchDocentesTimer = null;
-let searchRequisitosTimer = null;
 
 // Almacenar todos los docentes para filtrado local
 let todosLosDocentes = [];
@@ -22,16 +21,14 @@ let todosLosDocentes = [];
 document.addEventListener("DOMContentLoaded", async () => {
   // cerramos los modales desde que se carga la pagina por si las dudas
   const modalDocente = document.getElementById("modalDocente");
-  const modalRequisito = document.getElementById("modalRequisito");
   if (modalDocente) modalDocente.style.display = "none";
-  if (modalRequisito) modalRequisito.style.display = "none";
 
   // Verificar autenticación
   await checkAuthentication();
 
   // Cargar datos iniciales
+  // Cargar datos iniciales
   await cargarDocentes();
-  await cargarRequisitos();
 
   // Configurar modales y eventos
   configurarModales();
@@ -61,7 +58,7 @@ function configurarModales() {
     "btnCerrarModalDocente"
   );
 
-  // Asegurar que los modales estén cerrados al inicio
+  // Asegurar que el modal esté cerrado al inicio
   if (modalDocente) modalDocente.style.display = "none";
 
   btnNuevoDocente.addEventListener("click", () => {
@@ -75,35 +72,10 @@ function configurarModales() {
     modalDocente.style.display = "none";
   });
 
-  // Modal de Requisitos
-  const modalRequisito = document.getElementById("modalRequisito");
-  const btnNuevoRequisito = document.getElementById("btnNuevoRequisito");
-  const btnCerrarModalRequisito = document.getElementById(
-    "btnCerrarModalRequisito"
-  );
-
-  // Asegurar que los modales estén cerrados al inicio
-  if (modalRequisito) modalRequisito.style.display = "none";
-
-  btnNuevoRequisito.addEventListener("click", () => {
-    document.getElementById("modalRequisitoTitle").textContent =
-      "Nuevo Requisito";
-    document.getElementById("formRequisito").reset();
-    document.getElementById("requisito_id").value = "";
-    modalRequisito.style.display = "block";
-  });
-
-  btnCerrarModalRequisito.addEventListener("click", () => {
-    modalRequisito.style.display = "none";
-  });
-
-  // Cerrar modales al hacer clic fuera
+  // Cerrar modal al hacer clic fuera
   window.addEventListener("click", (event) => {
     if (event.target === modalDocente) {
       modalDocente.style.display = "none";
-    }
-    if (event.target === modalRequisito) {
-      modalRequisito.style.display = "none";
     }
   });
 }
@@ -114,12 +86,6 @@ function configurarEventos() {
   const formDocente = document.getElementById("formDocente");
   if (formDocente) {
     formDocente.addEventListener("submit", guardarDocente);
-  }
-
-  // Formulario de requisito
-  const formRequisito = document.getElementById("formRequisito");
-  if (formRequisito) {
-    formRequisito.addEventListener("submit", guardarRequisito);
   }
 
   // Búsqueda de docentes
@@ -161,48 +127,6 @@ function configurarEventos() {
     });
   } else {
     console.error("Campo de búsqueda de docentes NO encontrado");
-
-  }
-
-  // Búsqueda de requisitos
-  const btnBuscarRequisitos = document.getElementById("btnBuscarRequisitos");
-  if (btnBuscarRequisitos) {
-    btnBuscarRequisitos.addEventListener("click", buscarRequisitos);
-  }
-
-  // Búsqueda en tiempo real para requisitos
-  const busquedaRequisitoInput = document.getElementById("busquedaRequisito");
-  if (busquedaRequisitoInput) {
-    console.log("✅ Campo de búsqueda de requisitos encontrado");
-
-    busquedaRequisitoInput.addEventListener("input", (e) => {
-      console.log("🔍 Evento input detectado en requisitos:", e.target.value);
-
-      // Cancelar el timer anterior si existe
-      if (searchRequisitosTimer) {
-        clearTimeout(searchRequisitosTimer);
-      }
-
-      // Crear un nuevo timer que ejecutará la búsqueda después de 500ms
-      searchRequisitosTimer = setTimeout(() => {
-        console.log("⏰ Ejecutando búsqueda automática de requisitos");
-        buscarRequisitos();
-      }, 500);
-    });
-
-    // También mantener el evento Enter para búsqueda inmediata
-    busquedaRequisitoInput.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") {
-        console.log("⚡ Enter presionado - búsqueda inmediata de requisitos");
-        // Cancelar el timer si existe
-        if (searchRequisitosTimer) {
-          clearTimeout(searchRequisitosTimer);
-        }
-        buscarRequisitos();
-      }
-    });
-  } else {
-    console.error("Campo de búsqueda de requisitos NO encontrado");
   }
 
   // Logout
@@ -213,39 +137,6 @@ function configurarEventos() {
       await logout();
     });
   });
-
-  // Detectar scroll para actualizar sidebar automáticamente
-  const mainContent = document.querySelector(".main-content");
-  if (mainContent) {
-    mainContent.addEventListener("scroll", () => {
-      const docentesSection = document.getElementById("docentes-section");
-      const requisitosSection = document.getElementById("requisitos-section");
-      const sidebarItems = document.querySelectorAll(".sidebar-menu li");
-
-      if (!docentesSection || !requisitosSection) return;
-
-      const scrollPosition = mainContent.scrollTop + 100; // offset para mejor detección
-      const docentesTop = docentesSection.offsetTop;
-      const requisitosTop = requisitosSection.offsetTop;
-
-      // Determinar qué sección está visible
-      if (scrollPosition >= requisitosTop) {
-        // Estamos en requisitos
-        sidebarItems.forEach((item) => item.classList.remove("active"));
-        const requisitosItem = document.querySelector(
-          ".sidebar-menu li:nth-child(3)"
-        );
-        if (requisitosItem) requisitosItem.classList.add("active");
-      } else if (scrollPosition >= docentesTop) {
-        // Estamos en docentes
-        sidebarItems.forEach((item) => item.classList.remove("active"));
-        const docentesItem = document.querySelector(
-          ".sidebar-menu li:nth-child(2)"
-        );
-        if (docentesItem) docentesItem.classList.add("active");
-      }
-    });
-  }
 }
 
 // ==================== DOCENTES ====================
@@ -466,7 +357,27 @@ async function guardarDocente(e) {
   }
 }
 
-// ==================== REQUISITOS ====================
+// ==================== UTILIDADES ====================
+
+// Formatear fecha
+function formatearFecha(fechaStr) {
+  if (!fechaStr) return "-";
+  const fecha = new Date(fechaStr);
+  return fecha.toLocaleDateString("es-MX");
+}
+
+// Logout
+async function logout() {
+  try {
+    await AuthService.logout();
+    window.location.href = "../index.html";
+  } catch (error) {
+    console.error("Error en logout:", error);
+    // Aun si hay error, redirigir al login
+    window.location.href = "../index.html";
+  }
+}
+
 
 // Cargar requisitos
 async function cargarRequisitos(search = "") {
