@@ -2,16 +2,26 @@
 let editarSemestreId = null;
 let currentSemesterId = null;
 let semestreSeleccionado = null;
+let todosDocentes = [];
+let todosRequisitos = [];
+
+// Timer para debounce de búsqueda
+let searchDocentesTimer = null;
 
 document.addEventListener("DOMContentLoaded", async () => {
   // Verificar autenticación
   await checkAuthentication();
   
-  // Mostrar mensaje informativo
-  UIHelpers.showToast("Módulo de Bitácora - Sistema migrado a API REST", "info");
+  // Cargar semestres
+  await cargarSemestres();
+  
+  // Cargar docentes y requisitos
+  await cargarDocentes();
+  await cargarRequisitos();
   
   // Configurar eventos básicos
   configurarEventosBasicos();
+  configurarEventosSemestre();
 });
 
 // Verificar autenticación
@@ -31,7 +41,7 @@ async function checkAuthentication() {
 // Configurar eventos básicos
 function configurarEventosBasicos() {
   // Configurar logout
-  const logoutLinks = document.querySelectorAll('a[href="../index.html"]');
+  const logoutLinks = document.querySelectorAll('a[href="index.html"], a[href="../index.html"]');
   logoutLinks.forEach(link => {
     link.addEventListener('click', async (e) => {
       e.preventDefault();
@@ -40,13 +50,956 @@ function configurarEventosBasicos() {
   });
 }
 
+// Configurar eventos de semestre
+function configurarEventosSemestre() {
+  // Botón nuevo semestre
+  const btnNuevoSemestre = document.getElementById('btnNuevoSemestre');
+  if (btnNuevoSemestre) {
+    btnNuevoSemestre.addEventListener('click', () => {
+      document.getElementById('semestreFormOverlay').style.display = 'flex';
+    });
+  }
+
+  // Botón cerrar formulario
+  const btnCerrarForm = document.getElementById('btnCerrarFormSemestre');
+  if (btnCerrarForm) {
+    btnCerrarForm.addEventListener('click', () => {
+      document.getElementById('semestreFormOverlay').style.display = 'none';
+      document.getElementById('formSemestre').reset();
+    });
+  }
+
+  // Formulario de crear semestre
+  const formSemestre = document.getElementById('formSemestre');
+  if (formSemestre) {
+    formSemestre.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await crearSemestre();
+    });
+  }
+
+  // Master checkbox para docentes
+  const masterDocentes = document.getElementById('masterDocentes');
+  if (masterDocentes) {
+    masterDocentes.addEventListener('change', (e) => {
+      const checkboxes = document.querySelectorAll('#checkDocentes input[type="checkbox"]');
+      checkboxes.forEach(cb => cb.checked = e.target.checked);
+    });
+  }
+
+  // Master checkbox para requisitos
+  const masterRequisitos = document.getElementById('masterRequisitos');
+  if (masterRequisitos) {
+    masterRequisitos.addEventListener('change', (e) => {
+      const checkboxes = document.querySelectorAll('#checkRequisitos input[type="checkbox"]');
+      checkboxes.forEach(cb => cb.checked = e.target.checked);
+    });
+  }
+
+  // Botón Editar Docentes
+  const btnEditarDocentes = document.getElementById('btnEditarDocentes');
+  if (btnEditarDocentes) {
+    btnEditarDocentes.addEventListener('click', () => {
+      if (currentSemesterId) {
+        abrirModalEditarDocentes(currentSemesterId);
+      }
+    });
+  }
+
+  // Botón Cerrar modal de editar docentes
+  const btnCerrarEditarDocentes = document.getElementById('btnCerrarEditarDocentes');
+  if (btnCerrarEditarDocentes) {
+    btnCerrarEditarDocentes.addEventListener('click', () => {
+      document.getElementById('editarDocentesModal').style.display = 'none';
+    });
+  }
+
+  // Botón Editar Requisitos
+  const btnEditarRequisitos = document.getElementById('btnEditarRequisitos');
+  if (btnEditarRequisitos) {
+    btnEditarRequisitos.addEventListener('click', () => {
+      if (currentSemesterId) {
+        abrirModalEditarRequisitos(currentSemesterId);
+      }
+    });
+  }
+
+  // Botón Cerrar modal de editar requisitos
+  const btnCerrarEditarRequisitos = document.getElementById('btnCerrarEditarRequisitos');
+  if (btnCerrarEditarRequisitos) {
+    btnCerrarEditarRequisitos.addEventListener('click', () => {
+      document.getElementById('editarRequisitosModal').style.display = 'none';
+    });
+  }
+
+  // Botón Eliminar Semestre
+  const btnEliminarSemestre = document.getElementById('btnEliminarSemestre');
+  if (btnEliminarSemestre) {
+    btnEliminarSemestre.addEventListener('click', () => {
+      if (currentSemesterId) {
+        eliminarSemestreDesdeTabla(currentSemesterId);
+      }
+    });
+  }
+
+  // Botón Volver a lista de semestres
+  const btnVolverSemestres = document.getElementById('btnVolverSemestres');
+  if (btnVolverSemestres) {
+    btnVolverSemestres.addEventListener('click', () => {
+      volverAListaSemestres();
+    });
+  }
+
+  // Búsqueda de docentes en la tabla
+  const busquedaDocente = document.getElementById('busquedaDocente');
+  if (busquedaDocente) {
+    console.log("Campo de búsqueda de docentes encontrado");
+
+    busquedaDocente.addEventListener('input', (e) => {
+      console.log("Evento input detectado:", e.target.value);
+
+      // Cancelar el timer anterior si existe
+      if (searchDocentesTimer) {
+        clearTimeout(searchDocentesTimer);
+      }
+
+      // Crear un nuevo timer que ejecutará la búsqueda después de 150ms (búsqueda casi instantánea)
+      searchDocentesTimer = setTimeout(() => {
+        console.log("Ejecutando búsqueda automática");
+        filtrarDocentesEnTabla(e.target.value);
+      }, 150);
+    });
+
+    // También mantener el evento Enter para búsqueda inmediata
+    busquedaDocente.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        console.log("Enter presionado - búsqueda inmediata");
+        // Cancelar el timer si existe
+        if (searchDocentesTimer) {
+          clearTimeout(searchDocentesTimer);
+        }
+        filtrarDocentesEnTabla(e.target.value);
+      }
+    });
+  } else {
+    console.error("Campo de búsqueda de docentes NO encontrado");
+  }
+}
+
+// Filtrar docentes en la tabla de bitácora
+function filtrarDocentesEnTabla(busqueda) {
+  const tabla = document.querySelector('.bitacora-table tbody');
+  if (!tabla) return;
+
+  const filas = tabla.querySelectorAll('tr');
+  const busquedaLower = busqueda.toLowerCase().trim();
+
+  filas.forEach(fila => {
+    const nombreDocente = fila.querySelector('.docente-name');
+    if (nombreDocente) {
+      const texto = nombreDocente.textContent.toLowerCase();
+      if (texto.includes(busquedaLower)) {
+        fila.style.display = '';
+      } else {
+        fila.style.display = 'none';
+      }
+    }
+  });
+}
+
+// Volver a la lista de semestres
+function volverAListaSemestres() {
+  document.getElementById('tablaBitacora').style.display = 'none';
+  document.getElementById('semestresList').style.display = 'block';
+  currentSemesterId = null;
+  semestreSeleccionado = null;
+}
+
 // Logout
 async function logout() {
   try {
     await AuthService.logout();
-    window.location.href = '../index.html';
+    window.location.href = 'index.html';
   } catch (error) {
     console.error('Error en logout:', error);
-    window.location.href = '../index.html';
+    window.location.href = 'index.html';
   }
+}
+
+// ==================== CARGAR DATOS ====================
+
+// Cargar semestres
+async function cargarSemestres() {
+  try {
+    const result = await SemestreService.getAll();
+    
+    if (result && result.success) {
+      mostrarSemestres(result.data || []);
+    } else {
+      UIHelpers.showToast('Error al cargar semestres', 'error');
+    }
+  } catch (error) {
+    console.error('Error cargando semestres:', error);
+    UIHelpers.showToast('Error al cargar semestres', 'error');
+  }
+}
+
+// Mostrar semestres en la lista
+function mostrarSemestres(semestres) {
+  const lista = document.getElementById('listaSemestres');
+  if (!lista) return;
+
+  lista.innerHTML = '';
+
+  if (!semestres || semestres.length === 0) {
+    lista.innerHTML = '<li class="empty-message">No hay semestres registrados</li>';
+    return;
+  }
+
+  semestres.forEach(semestre => {
+    const li = document.createElement('li');
+    li.className = 'semestre-item';
+    li.innerHTML = `
+      <div class="semestre-info" onclick="verBitacora(${semestre.ID_semestre})" style="cursor: pointer;">
+        <h3>${semestre.nomSem}</h3>
+        <p>${formatearFecha(semestre.fecha_inicio)} - ${formatearFecha(semestre.fecha_fin)}</p>
+      </div>
+      <div class="semestre-actions">
+        <button class="btn-eliminar" onclick="eliminarSemestre(${semestre.ID_semestre})">
+          <i class="fas fa-trash-alt"></i> Eliminar
+        </button>
+        <button class="btn-editar" onclick="editarSemestre(${semestre.ID_semestre})">
+          <i class="fas fa-edit"></i> Editar
+        </button>
+      </div>
+    `;
+    lista.appendChild(li);
+  });
+}
+
+// Cargar docentes
+async function cargarDocentes() {
+  try {
+    const result = await DocenteService.getAll();
+    
+    if (result && result.success && result.data && result.data.docentes) {
+      todosDocentes = result.data.docentes;
+    }
+  } catch (error) {
+    console.error('Error cargando docentes:', error);
+  }
+}
+
+// Cargar requisitos
+async function cargarRequisitos() {
+  try {
+    const result = await RequisitoService.getAll();
+    
+    if (result && result.success) {
+      // Mapear los datos del backend (nombre) a requisitoTipo
+      todosRequisitos = (result.data || []).map(req => ({
+        id: req.id,
+        requisitoTipo: req.nombre || req.requisitoTipo,
+        ID_requisitos: req.id
+      }));
+      console.log('Requisitos cargados:', todosRequisitos);
+    }
+  } catch (error) {
+    console.error('Error cargando requisitos:', error);
+  }
+}
+
+// ==================== CREAR SEMESTRE ====================
+
+async function crearSemestre() {
+  const nomSem = document.getElementById('nomSem').value.trim();
+  const fecha_inicio = document.getElementById('fecha_inicio').value;
+  const fecha_fin = document.getElementById('fecha_fin').value;
+
+  if (!nomSem || !fecha_inicio || !fecha_fin) {
+    UIHelpers.showToast('Por favor completa todos los campos', 'warning');
+    return;
+  }
+
+  try {
+    const result = await SemestreService.create({
+      nomSem,
+      fecha_inicio,
+      fecha_fin
+    });
+
+    if (result && result.success) {
+      UIHelpers.showToast('Semestre creado exitosamente', 'success');
+      document.getElementById('semestreFormOverlay').style.display = 'none';
+      document.getElementById('formSemestre').reset();
+      await cargarSemestres();
+    } else {
+      UIHelpers.showToast(result?.message || 'Error al crear semestre', 'error');
+    }
+  } catch (error) {
+    console.error('Error creando semestre:', error);
+    UIHelpers.showToast('Error al crear semestre', 'error');
+  }
+}
+
+// ==================== ELIMINAR SEMESTRE ====================
+
+async function eliminarSemestre(id) {
+  if (!confirm('¿Estás seguro de que deseas eliminar este semestre? Se eliminarán todos los registros de bitácora asociados.')) {
+    return;
+  }
+
+  try {
+    const result = await SemestreService.delete(id);
+
+    if (result && result.success) {
+      UIHelpers.showToast(result.message || 'Semestre eliminado exitosamente', 'success');
+      await cargarSemestres();
+    } else {
+      UIHelpers.showToast(result?.message || 'Error al eliminar semestre', 'error');
+    }
+  } catch (error) {
+    console.error('Error eliminando semestre:', error);
+    UIHelpers.showToast('Error al eliminar semestre', 'error');
+  }
+}
+
+// Eliminar semestre desde la tabla de bitácora
+async function eliminarSemestreDesdeTabla(id) {
+  if (!confirm('¿Estás seguro de que deseas eliminar este semestre? Se eliminarán todos los registros de bitácora asociados.')) {
+    return;
+  }
+
+  try {
+    const result = await SemestreService.delete(id);
+
+    if (result && result.success) {
+      UIHelpers.showToast(result.message || 'Semestre eliminado exitosamente', 'success');
+      
+      // Volver a la lista de semestres
+      document.getElementById('tablaBitacora').style.display = 'none';
+      document.getElementById('semestresList').style.display = 'block';
+      currentSemesterId = null;
+      semestreSeleccionado = null;
+      
+      // Recargar la lista
+      await cargarSemestres();
+    } else {
+      UIHelpers.showToast(result?.message || 'Error al eliminar semestre', 'error');
+    }
+  } catch (error) {
+    console.error('Error eliminando semestre:', error);
+    UIHelpers.showToast('Error al eliminar semestre', 'error');
+  }
+}
+
+// ==================== EDITAR SEMESTRE ====================
+
+async function editarSemestre(id) {
+  try {
+    const result = await SemestreService.getById(id);
+    
+    if (result && result.success) {
+      const semestre = result.data;
+      
+      // Mostrar modal de edición (reutilizar el mismo formulario)
+      document.getElementById('nomSem').value = semestre.nomSem;
+      document.getElementById('fecha_inicio').value = semestre.fecha_inicio;
+      document.getElementById('fecha_fin').value = semestre.fecha_fin;
+      
+      editarSemestreId = id;
+      document.getElementById('semestreFormOverlay').style.display = 'flex';
+      
+      // Cambiar el submit del formulario
+      const form = document.getElementById('formSemestre');
+      form.onsubmit = async (e) => {
+        e.preventDefault();
+        await actualizarSemestre(id);
+      };
+    }
+  } catch (error) {
+    console.error('Error cargando semestre:', error);
+    UIHelpers.showToast('Error al cargar datos del semestre', 'error');
+  }
+}
+
+async function actualizarSemestre(id) {
+  const nomSem = document.getElementById('nomSem').value.trim();
+  const fecha_inicio = document.getElementById('fecha_inicio').value;
+  const fecha_fin = document.getElementById('fecha_fin').value;
+
+  if (!nomSem || !fecha_inicio || !fecha_fin) {
+    UIHelpers.showToast('Por favor completa todos los campos', 'warning');
+    return;
+  }
+
+  try {
+    const result = await SemestreService.update(id, {
+      nomSem,
+      fecha_inicio,
+      fecha_fin
+    });
+
+    if (result && result.success) {
+      UIHelpers.showToast('Semestre actualizado exitosamente', 'success');
+      document.getElementById('semestreFormOverlay').style.display = 'none';
+      document.getElementById('formSemestre').reset();
+      editarSemestreId = null;
+      
+      // Restaurar el submit original
+      const form = document.getElementById('formSemestre');
+      form.onsubmit = async (e) => {
+        e.preventDefault();
+        await crearSemestre();
+      };
+      
+      await cargarSemestres();
+    } else {
+      UIHelpers.showToast(result?.message || 'Error al actualizar semestre', 'error');
+    }
+  } catch (error) {
+    console.error('Error actualizando semestre:', error);
+    UIHelpers.showToast('Error al actualizar semestre', 'error');
+  }
+}
+
+// ==================== CONFIGURAR SEMESTRE ====================
+
+async function configurarSemestre(id) {
+  currentSemesterId = id;
+  
+  try {
+    const result = await SemestreService.getById(id);
+    
+    if (result && result.success) {
+      semestreSeleccionado = result.data;
+      
+      // Ocultar lista y mostrar configuración
+      document.getElementById('semestresList').style.display = 'none';
+      document.getElementById('configuracionSemestre').style.display = 'block';
+      document.getElementById('nombreSemestre').textContent = semestreSeleccionado.nomSem;
+      
+      // Cargar docentes y requisitos actuales del semestre
+      await cargarDocentesSemestre(id);
+      await cargarRequisitosSemestre(id);
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    UIHelpers.showToast('Error al cargar configuración', 'error');
+  }
+}
+
+async function cargarDocentesSemestre(semestreId) {
+  const container = document.getElementById('checkDocentes');
+  if (!container) return;
+
+  try {
+    // Obtener docentes del semestre
+    const result = await SemestreService.getDocentes(semestreId);
+    const docentesSemestre = result.success ? result.data : [];
+    const idsDocentesSemestre = docentesSemestre.map(d => d.ID_docente);
+
+    container.innerHTML = '';
+
+    todosDocentes.forEach(docente => {
+      const checked = idsDocentesSemestre.includes(docente.ID_docente);
+      const div = document.createElement('div');
+      div.className = 'checkbox-item';
+      div.innerHTML = `
+        <label>
+          <input type="checkbox" value="${docente.ID_docente}" ${checked ? 'checked' : ''} />
+          ${docente.nombre} ${docente.AP_Paterno} ${docente.AP_Materno || ''}
+        </label>
+      `;
+      container.appendChild(div);
+    });
+  } catch (error) {
+    console.error('Error cargando docentes del semestre:', error);
+  }
+}
+
+async function cargarRequisitosSemestre(semestreId) {
+  const container = document.getElementById('checkRequisitos');
+  if (!container) return;
+
+  try {
+    // Obtener requisitos del semestre
+    const result = await SemestreService.getRequisitos(semestreId);
+    const requisitosSemestre = result.success ? result.data : [];
+    const idsRequisitosSemestre = requisitosSemestre.map(r => r.ID_requisitos);
+
+    container.innerHTML = '';
+
+    todosRequisitos.forEach(requisito => {
+      const checked = idsRequisitosSemestre.includes(requisito.id);
+      const div = document.createElement('div');
+      div.className = 'checkbox-item';
+      div.innerHTML = `
+        <label>
+          <input type="checkbox" value="${requisito.id}" ${checked ? 'checked' : ''} />
+          ${requisito.nombre}
+        </label>
+      `;
+      container.appendChild(div);
+    });
+  } catch (error) {
+    console.error('Error cargando requisitos del semestre:', error);
+  }
+}
+
+async function guardarConfiguracion() {
+  if (!currentSemesterId) {
+    UIHelpers.showToast('No hay semestre seleccionado', 'error');
+    return;
+  }
+
+  // Obtener docentes seleccionados
+  const docentesCheckboxes = document.querySelectorAll('#checkDocentes input[type="checkbox"]:checked');
+  const docentes = Array.from(docentesCheckboxes).map(cb => cb.value);
+
+  // Obtener requisitos seleccionados
+  const requisitosCheckboxes = document.querySelectorAll('#checkRequisitos input[type="checkbox"]:checked');
+  const requisitos = Array.from(requisitosCheckboxes).map(cb => cb.value);
+
+  try {
+    const result = await SemestreService.saveConfiguration(currentSemesterId, {
+      docentes,
+      requisitos
+    });
+
+    if (result && result.success) {
+      UIHelpers.showToast('Configuración guardada exitosamente', 'success');
+      
+      // Cerrar el modal de configuración
+      document.getElementById('configuracionSemestre').style.display = 'none';
+      
+      // Recargar la bitácora para mostrar los cambios
+      await cargarBitacora(currentSemesterId);
+      
+      // Mantener visible la tabla de bitácora
+      document.getElementById('tablaBitacora').style.display = 'block';
+      document.getElementById('semestresList').style.display = 'none';
+    } else {
+      UIHelpers.showToast(result?.message || 'Error al guardar configuración', 'error');
+    }
+  } catch (error) {
+    console.error('Error guardando configuración:', error);
+    UIHelpers.showToast('Error al guardar configuración', 'error');
+  }
+}
+
+// ==================== EDITAR REQUISITOS MODAL ====================
+
+async function abrirModalEditarRequisitos(semestreId) {
+  try {
+    // Obtener requisitos del semestre
+    const result = await SemestreService.getRequisitos(semestreId);
+    const requisitosActuales = result.success ? result.data : [];
+    const idsRequisitosActuales = requisitosActuales.map(r => r.ID_requisitos);
+
+    // Separar requisitos actuales y disponibles
+    const actuales = todosRequisitos.filter(r => idsRequisitosActuales.includes(r.id));
+    const disponibles = todosRequisitos.filter(r => !idsRequisitosActuales.includes(r.id));
+
+    // Llenar lista de requisitos actuales
+    const containerActuales = document.getElementById('listaRequisitosActuales');
+    containerActuales.innerHTML = '';
+    
+    if (actuales.length === 0) {
+      containerActuales.innerHTML = '<p style="color: #9ca3af; text-align: center; padding: 20px;">No hay requisitos asignados</p>';
+    } else {
+      actuales.forEach(requisito => {
+        const div = document.createElement('div');
+        div.className = 'checkbox-item';
+        div.innerHTML = `
+          <label>
+            <input type="checkbox" value="${requisito.id}" checked />
+            <span>${requisito.requisitoTipo}</span>
+          </label>
+        `;
+        containerActuales.appendChild(div);
+      });
+    }
+
+    // Llenar lista de requisitos disponibles
+    const containerDisponibles = document.getElementById('listaRequisitosDisponibles');
+    containerDisponibles.innerHTML = '';
+    
+    if (disponibles.length === 0) {
+      containerDisponibles.innerHTML = '<p style="color: #9ca3af; text-align: center; padding: 20px;">Todos los requisitos están asignados</p>';
+    } else {
+      disponibles.forEach(requisito => {
+        const div = document.createElement('div');
+        div.className = 'checkbox-item';
+        div.innerHTML = `
+          <label>
+            <input type="checkbox" value="${requisito.id}" />
+            <span>${requisito.requisitoTipo}</span>
+          </label>
+        `;
+        containerDisponibles.appendChild(div);
+      });
+    }
+
+    // Mostrar modal
+    document.getElementById('editarRequisitosModal').style.display = 'flex';
+  } catch (error) {
+    console.error('Error cargando requisitos:', error);
+    UIHelpers.showToast('Error al cargar requisitos', 'error');
+  }
+}
+
+async function guardarEdicionRequisitos() {
+  if (!currentSemesterId) {
+    UIHelpers.showToast('No hay semestre seleccionado', 'error');
+    return;
+  }
+
+  // Obtener todos los requisitos seleccionados (actuales checked + disponibles checked)
+  const actualesChecked = document.querySelectorAll('#listaRequisitosActuales input[type="checkbox"]:checked');
+  const disponiblesChecked = document.querySelectorAll('#listaRequisitosDisponibles input[type="checkbox"]:checked');
+  
+  const requisitosSeleccionados = [
+    ...Array.from(actualesChecked).map(cb => cb.value),
+    ...Array.from(disponiblesChecked).map(cb => cb.value)
+  ];
+
+  // Obtener todos los docentes actuales del semestre
+  try {
+    const docentesResult = await SemestreService.getDocentes(currentSemesterId);
+    const docentesActuales = docentesResult.success ? docentesResult.data : [];
+    const idsDocentes = docentesActuales.map(d => d.ID_docente);
+
+    // Guardar configuración con los docentes actuales y los nuevos requisitos
+    const result = await SemestreService.saveConfiguration(currentSemesterId, {
+      docentes: idsDocentes,
+      requisitos: requisitosSeleccionados
+    });
+
+    if (result && result.success) {
+      UIHelpers.showToast('Requisitos actualizados exitosamente', 'success');
+      
+      // Cerrar el modal
+      document.getElementById('editarRequisitosModal').style.display = 'none';
+      
+      // Recargar la bitácora para mostrar los cambios
+      await cargarBitacora(currentSemesterId);
+      
+      // Mantener visible la tabla de bitácora
+      document.getElementById('tablaBitacora').style.display = 'block';
+      document.getElementById('semestresList').style.display = 'none';
+    } else {
+      UIHelpers.showToast(result?.message || 'Error al actualizar requisitos', 'error');
+    }
+  } catch (error) {
+    console.error('Error guardando requisitos:', error);
+    UIHelpers.showToast('Error al actualizar requisitos', 'error');
+  }
+}
+
+// ==================== EDITAR DOCENTES MODAL ====================
+
+async function abrirModalEditarDocentes(semestreId) {
+  try {
+    // Obtener docentes del semestre
+    const result = await SemestreService.getDocentes(semestreId);
+    const docentesActuales = result.success ? result.data : [];
+    const idsDocentesActuales = docentesActuales.map(d => d.ID_docente);
+
+    // Separar docentes actuales y disponibles
+    const actuales = todosDocentes.filter(d => idsDocentesActuales.includes(d.ID_docente));
+    const disponibles = todosDocentes.filter(d => !idsDocentesActuales.includes(d.ID_docente));
+
+    // Llenar lista de docentes actuales
+    const containerActuales = document.getElementById('listaDocentesActuales');
+    containerActuales.innerHTML = '';
+    
+    if (actuales.length === 0) {
+      containerActuales.innerHTML = '<p style="color: #9ca3af; text-align: center; padding: 20px;">No hay docentes asignados</p>';
+    } else {
+      actuales.forEach(docente => {
+        const nombreCompleto = `${docente.nombre} ${docente.AP_Paterno} ${docente.AP_Materno || ''}`.trim();
+        const div = document.createElement('div');
+        div.className = 'checkbox-item';
+        div.innerHTML = `
+          <label>
+            <input type="checkbox" value="${docente.ID_docente}" checked />
+            <span>${nombreCompleto}</span>
+          </label>
+        `;
+        containerActuales.appendChild(div);
+      });
+    }
+
+    // Llenar lista de docentes disponibles
+    const containerDisponibles = document.getElementById('listaDocentesDisponibles');
+    containerDisponibles.innerHTML = '';
+    
+    if (disponibles.length === 0) {
+      containerDisponibles.innerHTML = '<p style="color: #9ca3af; text-align: center; padding: 20px;">Todos los docentes están asignados</p>';
+    } else {
+      disponibles.forEach(docente => {
+        const nombreCompleto = `${docente.nombre} ${docente.AP_Paterno} ${docente.AP_Materno || ''}`.trim();
+        const div = document.createElement('div');
+        div.className = 'checkbox-item';
+        div.innerHTML = `
+          <label>
+            <input type="checkbox" value="${docente.ID_docente}" />
+            <span>${nombreCompleto}</span>
+          </label>
+        `;
+        containerDisponibles.appendChild(div);
+      });
+    }
+
+    // Mostrar modal
+    document.getElementById('editarDocentesModal').style.display = 'flex';
+  } catch (error) {
+    console.error('Error cargando docentes:', error);
+    UIHelpers.showToast('Error al cargar docentes', 'error');
+  }
+}
+
+async function guardarEdicionDocentes() {
+  if (!currentSemesterId) {
+    UIHelpers.showToast('No hay semestre seleccionado', 'error');
+    return;
+  }
+
+  // Obtener todos los docentes seleccionados (actuales checked + disponibles checked)
+  const actualesChecked = document.querySelectorAll('#listaDocentesActuales input[type="checkbox"]:checked');
+  const disponiblesChecked = document.querySelectorAll('#listaDocentesDisponibles input[type="checkbox"]:checked');
+  
+  const docentesSeleccionados = [
+    ...Array.from(actualesChecked).map(cb => cb.value),
+    ...Array.from(disponiblesChecked).map(cb => cb.value)
+  ];
+
+  // Obtener todos los requisitos actuales del semestre
+  try {
+    const requisitosResult = await SemestreService.getRequisitos(currentSemesterId);
+    const requisitosActuales = requisitosResult.success ? requisitosResult.data : [];
+    const idsRequisitos = requisitosActuales.map(r => r.ID_requisitos);
+
+    // Guardar configuración con los nuevos docentes y los requisitos actuales
+    const result = await SemestreService.saveConfiguration(currentSemesterId, {
+      docentes: docentesSeleccionados,
+      requisitos: idsRequisitos
+    });
+
+    if (result && result.success) {
+      UIHelpers.showToast('Docentes actualizados exitosamente', 'success');
+      
+      // Cerrar el modal
+      document.getElementById('editarDocentesModal').style.display = 'none';
+      
+      // Recargar la bitácora para mostrar los cambios
+      await cargarBitacora(currentSemesterId);
+      
+      // Mantener visible la tabla de bitácora
+      document.getElementById('tablaBitacora').style.display = 'block';
+      document.getElementById('semestresList').style.display = 'none';
+    } else {
+      UIHelpers.showToast(result?.message || 'Error al actualizar docentes', 'error');
+    }
+  } catch (error) {
+    console.error('Error guardando docentes:', error);
+    UIHelpers.showToast('Error al actualizar docentes', 'error');
+  }
+}
+
+// ==================== VER BITÁCORA ====================
+
+async function verBitacora(id) {
+  currentSemesterId = id;
+  
+  try {
+    const result = await SemestreService.getById(id);
+    
+    if (result && result.success) {
+      semestreSeleccionado = result.data;
+      
+      // Ocultar lista y mostrar bitácora
+      document.getElementById('semestresList').style.display = 'none';
+      document.getElementById('tablaBitacora').style.display = 'block';
+      document.getElementById('nombreSemestreTabla').textContent = semestreSeleccionado.nomSem;
+      
+      await cargarBitacora(id);
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    UIHelpers.showToast('Error al cargar bitácora', 'error');
+  }
+}
+
+async function cargarBitacora(semestreId) {
+  try {
+    const result = await SemestreService.getBitacora(semestreId);
+    
+    if (result && result.success) {
+      mostrarBitacora(result.data || []);
+    } else {
+      UIHelpers.showToast('Error al cargar bitácora', 'error');
+    }
+  } catch (error) {
+    console.error('Error cargando bitácora:', error);
+    UIHelpers.showToast('Error al cargar bitácora', 'error');
+  }
+}
+
+function mostrarBitacora(bitacora) {
+  const contenedor = document.getElementById('contenedorBitacora');
+  if (!contenedor) return;
+
+  if (!bitacora || bitacora.length === 0) {
+    contenedor.innerHTML = '<p class="empty-message">No hay registros en la bitácora</p>';
+    return;
+  }
+
+  // Obtener requisitos únicos y ordenarlos
+  const requisitosUnicos = [...new Set(bitacora.map(b => b.requisito_nombre))].filter(r => r);
+  
+  // Obtener docentes únicos y ordenarlos
+  const docentesUnicos = [...new Set(bitacora.map(b => b.docente_nombre))].filter(d => d);
+
+  // Crear tabla
+  let html = '<table class="bitacora-table"><thead><tr>';
+  html += '<th class="docente-col">Docente</th>';
+  
+  requisitosUnicos.forEach(req => {
+    html += `<th class="requisito-col">${req}</th>`;
+  });
+  
+  html += '</tr></thead><tbody>';
+  
+  // Crear fila para cada docente
+  docentesUnicos.forEach(docente => {
+    html += '<tr>';
+    html += `<td class="docente-name">${docente}</td>`;
+    
+    requisitosUnicos.forEach(requisito => {
+      const registro = bitacora.find(b => b.docente_nombre === docente && b.requisito_nombre === requisito);
+      
+      if (registro) {
+        const registroId = registro.id;
+        const estado = registro.estado || 'Incompleto';
+        const comentario = registro.comentario || '';
+        const estadoClass = estado === 'Completo' ? 'completo' : 'incompleto';
+        const estadoIcon = estado === 'Completo' ? '✓' : '⚠';
+        
+        html += `
+          <td class="requisito-cell">
+            <div class="cell-content">
+              <div class="estado-selector ${estadoClass}">
+                <i class="fas fa-exclamation-triangle"></i>
+                <select onchange="actualizarEstadoCell(${registroId}, this.value)" data-registro-id="${registroId}">
+                  <option value="Incompleto" ${estado === 'Incompleto' ? 'selected' : ''}>Incompleto</option>
+                  <option value="Completo" ${estado === 'Completo' ? 'selected' : ''}>Completo</option>
+                </select>
+                <i class="fas fa-chevron-down"></i>
+              </div>
+              <textarea 
+                placeholder="Agregar comentario..." 
+                class="comentario-input"
+                data-registro-id="${registroId}"
+                onblur="actualizarComentarioCell(${registroId}, this.value)"
+              >${comentario}</textarea>
+              <button class="btn-edit-cell" onclick="editarRegistroCell(${registroId})" title="Editar">
+                <i class="fas fa-pencil-alt"></i>
+              </button>
+            </div>
+          </td>
+        `;
+      } else {
+        html += '<td class="requisito-cell empty-cell">-</td>';
+      }
+    });
+    
+    html += '</tr>';
+  });
+  
+  html += '</tbody></table>';
+  contenedor.innerHTML = html;
+  
+  // Aplicar colores a los selectores después de renderizar
+  actualizarColoresEstado();
+}
+
+function actualizarColoresEstado() {
+  document.querySelectorAll('.estado-selector select').forEach(select => {
+    const estado = select.value;
+    const parent = select.closest('.estado-selector');
+    parent.classList.remove('completo', 'incompleto');
+    parent.classList.add(estado === 'Completo' ? 'completo' : 'incompleto');
+  });
+}
+
+async function actualizarEstadoCell(registroId, nuevoEstado) {
+  try {
+    const result = await fetch(`index.php?resource=bitacora&action=update`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        id: registroId,
+        estado: nuevoEstado
+      })
+    });
+    
+    const data = await result.json();
+    
+    if (data.success) {
+      UIHelpers.showToast('Estado actualizado', 'success');
+      actualizarColoresEstado();
+    } else {
+      UIHelpers.showToast('Error al actualizar estado', 'error');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    UIHelpers.showToast('Error al actualizar estado', 'error');
+  }
+}
+
+async function actualizarComentarioCell(registroId, comentario) {
+  try {
+    const result = await fetch(`index.php?resource=bitacora&action=update`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        id: registroId,
+        comentario: comentario
+      })
+    });
+    
+    const data = await result.json();
+    
+    if (data.success) {
+      UIHelpers.showToast('Comentario guardado', 'success');
+    } else {
+      UIHelpers.showToast('Error al guardar comentario', 'error');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    UIHelpers.showToast('Error al guardar comentario', 'error');
+  }
+}
+
+function editarRegistroCell(registroId) {
+  // Esta función puede abrir un modal más detallado si es necesario
+  UIHelpers.showToast('Función de edición detallada', 'info');
+}
+
+// ==================== UTILIDADES ====================
+
+function formatearFecha(fechaStr) {
+  if (!fechaStr) return '-';
+  const fecha = new Date(fechaStr + 'T00:00:00');
+  return fecha.toLocaleDateString('es-MX', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
 }

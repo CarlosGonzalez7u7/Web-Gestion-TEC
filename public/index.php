@@ -494,7 +494,7 @@ elseif ($endpoint === 'semestres') {
         $conn = $db->getConnection();
         
         if ($action === 'list' && $_SERVER['REQUEST_METHOD'] === 'GET') {
-            $stmt = $conn->prepare("SELECT ID_semestre as id, nomSem as nombre, fecha_inicio, fecha_fin FROM semestres ORDER BY fecha_inicio DESC");
+            $stmt = $conn->prepare("SELECT ID_semestre, nomSem, fecha_inicio, fecha_fin FROM semestres ORDER BY fecha_inicio DESC");
             $stmt->execute();
             $result = $stmt->get_result();
             $semestres = [];
@@ -510,7 +510,7 @@ elseif ($endpoint === 'semestres') {
                 sendResponse(false, null, 'ID requerido', 400);
             }
             
-            $stmt = $conn->prepare("SELECT ID_semestre as id, nomSem as nombre, fecha_inicio, fecha_fin FROM semestres WHERE ID_semestre = ?");
+            $stmt = $conn->prepare("SELECT ID_semestre, nomSem, fecha_inicio, fecha_fin FROM semestres WHERE ID_semestre = ?");
             $stmt->bind_param("i", $id);
             $stmt->execute();
             $result = $stmt->get_result();
@@ -520,6 +520,89 @@ elseif ($endpoint === 'semestres') {
                 sendResponse(true, $semestre);
             } else {
                 sendResponse(false, null, 'Semestre no encontrado', 404);
+            }
+        }
+        
+        elseif ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $input = json_decode(file_get_contents('php://input'), true);
+            
+            $nomSem = $input['nomSem'] ?? '';
+            $fecha_inicio = $input['fecha_inicio'] ?? '';
+            $fecha_fin = $input['fecha_fin'] ?? '';
+            
+            if (empty($nomSem) || empty($fecha_inicio) || empty($fecha_fin)) {
+                sendResponse(false, null, 'Todos los campos son requeridos', 400);
+            }
+            
+            $stmt = $conn->prepare("INSERT INTO semestres (nomSem, fecha_inicio, fecha_fin) VALUES (?, ?, ?)");
+            $stmt->bind_param("sss", $nomSem, $fecha_inicio, $fecha_fin);
+            
+            if ($stmt->execute()) {
+                $id = $conn->insert_id;
+                sendResponse(true, ['id' => $id], 'Semestre creado exitosamente');
+            } else {
+                sendResponse(false, null, 'Error al crear semestre', 500);
+            }
+        }
+        
+        elseif ($action === 'update' && $_SERVER['REQUEST_METHOD'] === 'PUT') {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $id = $_GET['id'] ?? '';
+            
+            if (empty($id)) {
+                sendResponse(false, null, 'ID requerido', 400);
+            }
+            
+            $nomSem = $input['nomSem'] ?? '';
+            $fecha_inicio = $input['fecha_inicio'] ?? '';
+            $fecha_fin = $input['fecha_fin'] ?? '';
+            
+            if (empty($nomSem) || empty($fecha_inicio) || empty($fecha_fin)) {
+                sendResponse(false, null, 'Todos los campos son requeridos', 400);
+            }
+            
+            $stmt = $conn->prepare("UPDATE semestres SET nomSem = ?, fecha_inicio = ?, fecha_fin = ? WHERE ID_semestre = ?");
+            $stmt->bind_param("sssi", $nomSem, $fecha_inicio, $fecha_fin, $id);
+            
+            if ($stmt->execute()) {
+                if ($stmt->affected_rows > 0) {
+                    sendResponse(true, null, 'Semestre actualizado exitosamente');
+                } else {
+                    sendResponse(false, null, 'Semestre no encontrado o sin cambios', 404);
+                }
+            } else {
+                sendResponse(false, null, 'Error al actualizar semestre', 500);
+            }
+        }
+        
+        elseif ($action === 'delete' && $_SERVER['REQUEST_METHOD'] === 'DELETE') {
+            $id = $_GET['id'] ?? '';
+            if (empty($id)) {
+                sendResponse(false, null, 'ID requerido', 400);
+            }
+            
+            // Primero eliminar registros de bitácora
+            $deleteBitacoraStmt = $conn->prepare("DELETE FROM bitacora_semestre WHERE ID_semestre = ?");
+            $deleteBitacoraStmt->bind_param("i", $id);
+            $deleteBitacoraStmt->execute();
+            $registrosEliminados = $deleteBitacoraStmt->affected_rows;
+            
+            // Luego eliminar el semestre
+            $stmt = $conn->prepare("DELETE FROM semestres WHERE ID_semestre = ?");
+            $stmt->bind_param("i", $id);
+            
+            if ($stmt->execute()) {
+                if ($stmt->affected_rows > 0) {
+                    $mensaje = "Semestre eliminado exitosamente";
+                    if ($registrosEliminados > 0) {
+                        $mensaje .= " (se eliminaron $registrosEliminados registros de bitácora asociados)";
+                    }
+                    sendResponse(true, ['registros_bitacora_eliminados' => $registrosEliminados], $mensaje);
+                } else {
+                    sendResponse(false, null, 'Semestre no encontrado', 404);
+                }
+            } else {
+                sendResponse(false, null, 'Error al eliminar semestre', 500);
             }
         }
         
@@ -602,6 +685,70 @@ elseif ($endpoint === 'bitacora') {
                 $bitacora[] = $row;
             }
             sendResponse(true, $bitacora);
+        }
+        
+        elseif ($action === 'requisitos' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            $semestre_id = $_GET['semestre_id'] ?? '';
+            if (empty($semestre_id)) {
+                sendResponse(false, null, 'ID de semestre requerido', 400);
+            }
+            
+            // Obtener requisitos que tienen registros en bitácora para este semestre
+            $stmt = $conn->prepare("
+                SELECT DISTINCT r.ID_requisitos, r.requisitoTipo
+                FROM requisitos r
+                INNER JOIN bitacora_semestre b ON r.ID_requisitos = b.ID_requisito
+                WHERE b.ID_semestre = ?
+                ORDER BY r.requisitoTipo
+            ");
+            $stmt->bind_param("i", $semestre_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $requisitos = [];
+            while ($row = $result->fetch_assoc()) {
+                $requisitos[] = $row;
+            }
+            sendResponse(true, $requisitos);
+        }
+        
+        elseif ($action === 'configurar' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $semestre_id = $input['semestre_id'] ?? '';
+            $docentes = $input['docentes'] ?? [];
+            $requisitos = $input['requisitos'] ?? [];
+            
+            if (empty($semestre_id)) {
+                sendResponse(false, null, 'ID de semestre requerido', 400);
+            }
+            
+            // Iniciar transacción
+            $conn->begin_transaction();
+            
+            try {
+                // Eliminar configuración anterior del semestre
+                $deleteStmt = $conn->prepare("DELETE FROM bitacora_semestre WHERE ID_semestre = ?");
+                $deleteStmt->bind_param("i", $semestre_id);
+                $deleteStmt->execute();
+                
+                // Insertar nuevas combinaciones docente-requisito
+                if (!empty($docentes) && !empty($requisitos)) {
+                    $insertStmt = $conn->prepare("INSERT INTO bitacora_semestre (ID_semestre, ID_docente, ID_requisito, cumple, estado, comentario) VALUES (?, ?, ?, 0, 'Pendiente', '')");
+                    
+                    foreach ($docentes as $docente_id) {
+                        foreach ($requisitos as $requisito_id) {
+                            $insertStmt->bind_param("iii", $semestre_id, $docente_id, $requisito_id);
+                            $insertStmt->execute();
+                        }
+                    }
+                }
+                
+                $conn->commit();
+                sendResponse(true, null, 'Configuración guardada exitosamente');
+                
+            } catch (Exception $e) {
+                $conn->rollback();
+                sendResponse(false, null, 'Error al guardar configuración: ' . $e->getMessage(), 500);
+            }
         }
         
         elseif ($action === 'update' && $_SERVER['REQUEST_METHOD'] === 'PUT') {

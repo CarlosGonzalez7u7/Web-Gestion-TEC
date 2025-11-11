@@ -15,6 +15,9 @@ let currentSearchTerm = "";
 let searchDocentesTimer = null;
 let searchRequisitosTimer = null;
 
+// Almacenar todos los docentes para filtrado local
+let todosLosDocentes = [];
+
 document.addEventListener("DOMContentLoaded", async () => {
   // cerramos los modales desde que se carga la pagina por si las dudas
   const modalDocente = document.getElementById("modalDocente");
@@ -127,27 +130,27 @@ function configurarEventos() {
   // Búsqueda en tiempo real para docentes
   const busquedaInput = document.getElementById("busqueda");
   if (busquedaInput) {
-    console.log("✅ Campo de búsqueda de docentes encontrado");
+    console.log("Campo de búsqueda de docentes encontrado");
 
     busquedaInput.addEventListener("input", (e) => {
-      console.log("🔍 Evento input detectado:", e.target.value);
+      console.log("Evento input detectado:", e.target.value);
 
       // Cancelar el timer anterior si existe
       if (searchDocentesTimer) {
         clearTimeout(searchDocentesTimer);
       }
 
-      // Crear un nuevo timer que ejecutará la búsqueda después de 500ms
+      // Crear un nuevo timer que ejecutará la búsqueda después de 150ms (búsqueda casi instantánea)
       searchDocentesTimer = setTimeout(() => {
-        console.log("⏰ Ejecutando búsqueda automática");
+        console.log("Ejecutando búsqueda automática");
         buscarDocentes();
-      }, 500);
+      }, 150);
     });
 
     // También mantener el evento Enter para búsqueda inmediata
     busquedaInput.addEventListener("keypress", (e) => {
       if (e.key === "Enter") {
-        console.log("⚡ Enter presionado - búsqueda inmediata");
+        console.log("Enter presionado - búsqueda inmediata");
         // Cancelar el timer si existe
         if (searchDocentesTimer) {
           clearTimeout(searchDocentesTimer);
@@ -156,7 +159,7 @@ function configurarEventos() {
       }
     });
   } else {
-    console.error("❌ Campo de búsqueda de docentes NO encontrado");
+    console.error("Campo de búsqueda de docentes NO encontrado");
   }
 
   // Búsqueda de requisitos
@@ -201,7 +204,7 @@ function configurarEventos() {
   }
 
   // Logout
-  const logoutLinks = document.querySelectorAll('a[href="../index.html"]');
+  const logoutLinks = document.querySelectorAll('a[href="index.html"], a[href="../index.html"]');
   logoutLinks.forEach((link) => {
     link.addEventListener("click", async (e) => {
       e.preventDefault();
@@ -260,6 +263,9 @@ async function cargarDocentes(search = "") {
     const result = await DocenteService.getAll(params);
 
     if (result && result.success) {
+      // Guardar todos los docentes para filtrado local
+      todosLosDocentes = result.data.docentes || [];
+      
       actualizarTablaDocentes(result.data.docentes);
       actualizarPaginacionDocentes(result.data.pagination);
     } else {
@@ -329,27 +335,28 @@ function formatearFecha(fechaStr) {
 async function buscarDocentes() {
   const termino = document.getElementById("busqueda")?.value?.trim() || "";
   currentSearchTerm = termino;
-  currentPage = 1; // Resetear página al buscar
 
-  // Mostrar indicador de búsqueda
-  const searchContainer = document.querySelector(
-    "#docentes-section .search-container"
-  );
-  if (searchContainer) {
-    searchContainer.classList.add("searching");
+  console.log("Buscando docentes con término:", termino);
+
+  // Si no hay término de búsqueda, mostrar todos
+  if (!termino) {
+    actualizarTablaDocentes(todosLosDocentes);
+    return;
   }
 
-  try {
-    await cargarDocentes(termino);
-  } catch (error) {
-    console.error("Error en búsqueda:", error);
-    UIHelpers.showToast("Error al buscar docentes", "error");
-  } finally {
-    // Quitar indicador de búsqueda
-    if (searchContainer) {
-      searchContainer.classList.remove("searching");
-    }
-  }
+  // Filtrar localmente usando includes (búsqueda parcial)
+  const terminoLower = termino.toLowerCase();
+  const docentesFiltrados = todosLosDocentes.filter(docente => {
+    const nombreCompleto = `${docente.nombre} ${docente.AP_Paterno} ${docente.AP_Materno || ''}`.toLowerCase();
+    const cedula = (docente.cedula || '').toLowerCase();
+    
+    return nombreCompleto.includes(terminoLower) || cedula.includes(terminoLower);
+  });
+
+  console.log("Docentes filtrados:", docentesFiltrados.length);
+
+  // Actualizar la tabla con los resultados filtrados
+  actualizarTablaDocentes(docentesFiltrados);
 }
 
 // Abrir modal para editar docente
@@ -651,11 +658,11 @@ function formatearFecha(fechaStr) {
 async function logout() {
   try {
     await AuthService.logout();
-    window.location.href = "../index.html";
+    window.location.href = "index.html";
   } catch (error) {
     console.error("Error en logout:", error);
     // Aun si hay error, redirigir al login
-    window.location.href = "../index.html";
+    window.location.href = "index.html";
   }
 }
 

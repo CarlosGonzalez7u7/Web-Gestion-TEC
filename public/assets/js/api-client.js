@@ -204,31 +204,47 @@ class DocenteService {
 
 class SemestreService {
     static async getAll(params = {}) {
-        return apiClient.get(API_CONFIG.ENDPOINTS.SEMESTRES.LIST, params);
+        return apiClient.get('semestres', 'list', params);
     }
 
     static async getById(id) {
-        return apiClient.get(`${API_CONFIG.ENDPOINTS.SEMESTRES.SHOW}/${id}`);
+        return apiClient.get('semestres', 'get', { id });
     }
 
     static async getWithStats(id) {
-        return apiClient.get(`${API_CONFIG.ENDPOINTS.SEMESTRES.STATS}/${id}/stats`);
+        return apiClient.get('semestres', 'stats', { id });
     }
 
     static async create(data) {
-        return apiClient.post(API_CONFIG.ENDPOINTS.SEMESTRES.CREATE, data);
+        return apiClient.post('semestres', 'create', data);
     }
 
     static async update(id, data) {
-        return apiClient.put(`${API_CONFIG.ENDPOINTS.SEMESTRES.UPDATE}/${id}`, data);
+        return apiClient.put('semestres', 'update', data, { id });
     }
 
     static async delete(id) {
-        return apiClient.delete(`${API_CONFIG.ENDPOINTS.SEMESTRES.DELETE}/${id}`);
+        return apiClient.delete('semestres', 'delete', {}, { id });
     }
 
     static async search(term) {
-        return apiClient.get(`${API_CONFIG.ENDPOINTS.SEMESTRES.SEARCH}/${encodeURIComponent(term)}`);
+        return apiClient.get('semestres', 'search', { search: term });
+    }
+
+    static async getDocentes(semestreId) {
+        return apiClient.get('semestres', 'docentes', { semestre_id: semestreId });
+    }
+
+    static async getRequisitos(semestreId) {
+        return apiClient.get('bitacora', 'requisitos', { semestre_id: semestreId });
+    }
+
+    static async saveConfiguration(semestreId, data) {
+        return apiClient.post('bitacora', 'configurar', { semestre_id: semestreId, ...data });
+    }
+
+    static async getBitacora(semestreId) {
+        return apiClient.get('bitacora', 'list', { semestre_id: semestreId });
     }
 }
 
