@@ -360,7 +360,7 @@ async function cargarSemestres() {
 }
 
 // Mostrar semestres en la lista
-function mostrarSemestres(semestres) {
+async function mostrarSemestres(semestres) {
   const lista = document.getElementById('listaSemestres');
   if (!lista) return;
 
@@ -371,25 +371,70 @@ function mostrarSemestres(semestres) {
     return;
   }
 
-  semestres.forEach(semestre => {
+  // Verificar el estado de cada semestre (si tiene bitácora o está vacío)
+  for (const semestre of semestres) {
+    const estaVacio = await verificarSemestreVacio(semestre.ID_semestre);
+    
     const li = document.createElement('li');
     li.className = 'semestre-item';
-    li.innerHTML = `
-      <div class="semestre-info" onclick="verBitacora(${semestre.ID_semestre})" style="cursor: pointer;">
-        <h3>${semestre.nomSem}</h3>
-        <p>${formatearFecha(semestre.fecha_inicio)} - ${formatearFecha(semestre.fecha_fin)}</p>
-      </div>
-      <div class="semestre-actions">
+    
+    // Construir los botones de acción según el estado
+    let botonesHTML = '';
+    
+    if (estaVacio) {
+      // Semestre vacío o nuevo: mostrar botón de configurar
+      botonesHTML = `
+        <button class="btn-configurar" onclick="configurarSemestre(${semestre.ID_semestre})">
+          <i class="fas fa-cog"></i> Configurar
+        </button>
         <button class="btn-eliminar" onclick="eliminarSemestre(${semestre.ID_semestre})">
           <i class="fas fa-trash-alt"></i> Eliminar
         </button>
         <button class="btn-editar" onclick="editarSemestre(${semestre.ID_semestre})">
           <i class="fas fa-edit"></i> Editar
         </button>
+      `;
+    } else {
+      // Semestre configurado: solo mostrar editar y eliminar
+      botonesHTML = `
+        <button class="btn-eliminar" onclick="eliminarSemestre(${semestre.ID_semestre})">
+          <i class="fas fa-trash-alt"></i> Eliminar
+        </button>
+        <button class="btn-editar" onclick="editarSemestre(${semestre.ID_semestre})">
+          <i class="fas fa-edit"></i> Editar
+        </button>
+      `;
+    }
+    
+    li.innerHTML = `
+      <div class="semestre-info" onclick="verBitacora(${semestre.ID_semestre})" style="cursor: pointer;">
+        <h3>${semestre.nomSem}</h3>
+        <p>${formatearFecha(semestre.fecha_inicio)} - ${formatearFecha(semestre.fecha_fin)}</p>
+      </div>
+      <div class="semestre-actions">
+        ${botonesHTML}
       </div>
     `;
     lista.appendChild(li);
-  });
+  }
+}
+
+// Verificar si un semestre está vacío (sin bitácora configurada)
+async function verificarSemestreVacio(semestreId) {
+  try {
+    const result = await SemestreService.getBitacora(semestreId);
+    
+    if (result && result.success) {
+      const bitacora = result.data || [];
+      // Un semestre está vacío si no tiene registros en la bitácora
+      return bitacora.length === 0;
+    }
+    
+    return true; // Si hay error, asumir que está vacío
+  } catch (error) {
+    console.error('Error verificando semestre:', error);
+    return true; // Si hay error, asumir que está vacío
+  }
 }
 
 // Cargar docentes
@@ -722,6 +767,9 @@ async function guardarConfiguracion() {
       // Mantener visible la tabla de bitácora
       document.getElementById('tablaBitacora').style.display = 'block';
       document.getElementById('semestresList').style.display = 'none';
+      
+      // Recargar la lista de semestres en segundo plano para actualizar los botones
+      await cargarSemestres();
     } else {
       UIHelpers.showToast(result?.message || 'Error al guardar configuración', 'error');
     }
@@ -849,6 +897,9 @@ async function guardarEdicionRequisitos() {
       // Mantener visible la tabla de bitácora
       document.getElementById('tablaBitacora').style.display = 'block';
       document.getElementById('semestresList').style.display = 'none';
+      
+      // Recargar la lista de semestres en segundo plano para actualizar los botones
+      await cargarSemestres();
     } else {
       UIHelpers.showToast(result?.message || 'Error al actualizar requisitos', 'error');
     }
@@ -978,6 +1029,9 @@ async function guardarEdicionDocentes() {
       // Mantener visible la tabla de bitácora
       document.getElementById('tablaBitacora').style.display = 'block';
       document.getElementById('semestresList').style.display = 'none';
+      
+      // Recargar la lista de semestres en segundo plano para actualizar los botones
+      await cargarSemestres();
     } else {
       UIHelpers.showToast(result?.message || 'Error al actualizar docentes', 'error');
     }

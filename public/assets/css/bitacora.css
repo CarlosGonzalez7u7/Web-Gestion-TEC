@@ -369,7 +369,8 @@ input[type="date"]:focus {
 }
 
 .semestre-actions .btn-eliminar,
-.semestre-actions .btn-editar {
+.semestre-actions .btn-editar,
+.semestre-actions .btn-configurar {
     padding: 0.5rem 1.2rem;
     border: none;
     border-radius: 6px;
@@ -381,6 +382,17 @@ input[type="date"]:focus {
     align-items: center;
     gap: 0.4rem;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.semestre-actions .btn-configurar {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.semestre-actions .btn-configurar:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
 }
 
 .semestre-actions .btn-eliminar {
