@@ -3,7 +3,7 @@
 class Database {
     private $host = "localhost";
     private $user = "root";
-    private $password = "";
+    private $password = "12345678";
     private $database = "webnahim";
     private $connection;
     
